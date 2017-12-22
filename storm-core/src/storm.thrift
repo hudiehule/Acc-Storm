@@ -163,16 +163,21 @@ struct TopologySummary {
 526: optional double assigned_cpu;
 }
 
+//Modified by Die Hu, add opencl devices info
 struct SupervisorSummary {
   1: required string host;
   2: required i32 uptime_secs;
   3: required i32 num_workers;
   4: required i32 num_used_workers;
-  5: required string supervisor_id;
-  6: optional string version = "VERSION_NOT_PROVIDED";
-  7: optional map<string, double> total_resources;
-  8: optional double used_mem;
-  9: optional double used_cpu;
+  5: required i32 num_ocl_fpga_devices;  // add
+  6: required i32 num_used_ocl_fpga_devices; // add
+  7: required i32 num_ocl_gpu_devices;  // add
+  8: required i32 num_used_ocl_gpu_devices; // add
+  9: required string supervisor_id;
+ 10: optional string version = "VERSION_NOT_PROVIDED";
+ 11: optional map<string, double> total_resources;
+ 12: optional double used_mem;
+ 13: optional double used_cpu;
 }
 
 struct NimbusSummary {
@@ -415,6 +420,7 @@ struct BeginDownloadResult {
   3: optional i64 data_size;
 }
 
+// Modified by Die Hu
 struct SupervisorInfo {
     1: required i64 time_secs;
     2: required string hostname;
@@ -425,6 +431,10 @@ struct SupervisorInfo {
     7: optional i64 uptime_secs;
     8: optional string version;
     9: optional map<string, double> resources_map;
+   10: optional i32 ocl_fpga_device_num; // add
+   11: optional i32 ocl_gpu_device_num;  // add
+   12: optional i32 ocl_used_fpga_device_num; //add
+   13: optional i32 ocl_used_gpu_device_num; //add
 }
 
 struct NodeInfo {
