@@ -1794,6 +1794,10 @@
                                                      (:uptime-secs info)
                                                      (count ports)
                                                      (count (:used-ports info))
+                                                     (:ocl-fpga-device-num  info)
+                                                     (:ocl-used-fpga-device-num info)
+                                                     (:ocl-gpu-device-num info)
+                                                     (:ocl-used-gpu-device-num info)
                                                      id) ]
                                        (.set_total_resources sup-sum (map-val double (:resources-map info)))
                                        (when-let [[total-mem total-cpu used-mem used-cpu] (.get @(:node-id->resources nimbus) id)]

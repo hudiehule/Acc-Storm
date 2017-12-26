@@ -1369,6 +1369,18 @@ public class Config extends HashMap<String, Object> {
     public static final String SUPERVISOR_ENABLE = "supervisor.enable";
 
     /**
+     * add by hudie
+     * Whether or not the supervisor can launch accelerators. Defaults to true -- and
+     * users and change it in the configuration files. if users want to utilize the ocl fpga and
+     * gpu resources , this config item should be set true.
+     */
+    @isBoolean
+    public static final String SUPERVISOR_OCL_ENABLE = "supervisor.ocl.enable";
+
+    @isInteger
+    @isPositiveNumber
+    public static final String SUPERVISOR_OCL_NATIVE_PORT = "supervisor.ocl.native.port";
+    /**
      * how often the supervisor sends a heartbeat to the master.
      */
     @isInteger

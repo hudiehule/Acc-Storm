@@ -37,6 +37,7 @@ import org.apache.storm.cluster.ClusterUtils;
 import org.apache.storm.cluster.DaemonType;
 import org.apache.storm.cluster.IStormClusterState;
 import org.apache.storm.daemon.DaemonCommon;
+import org.apache.storm.daemon.supervisor.oclDeviceManage.DeviceManager;
 import org.apache.storm.daemon.supervisor.timer.SupervisorHealthCheck;
 import org.apache.storm.daemon.supervisor.timer.SupervisorHeartbeat;
 import org.apache.storm.daemon.supervisor.timer.UpdateBlobs;
@@ -73,6 +74,7 @@ public class Supervisor implements DaemonCommon, AutoCloseable {
     private final String hostName;
     // used for reporting used ports when heartbeating
     private final AtomicReference<Map<Long, LocalAssignment>> currAssignment;
+   // private final AtomicReference<Integer> accNum;
     private final StormTimer heartbeatTimer;
     private final StormTimer eventTimer;
     private final StormTimer blobUpdateTimer;
@@ -80,7 +82,8 @@ public class Supervisor implements DaemonCommon, AutoCloseable {
     private final AsyncLocalizer asyncLocalizer;
     private EventManager eventManager;
     private ReadClusterState readState;
-    
+    // add by die_hu,responsible for managing the accelerator devices
+    private DeviceManager deviceManager;
     private Supervisor(ISupervisor iSupervisor) throws IOException {
         this(Utils.readStormConfig(), null, iSupervisor);
     }
@@ -130,6 +133,13 @@ public class Supervisor implements DaemonCommon, AutoCloseable {
         this.eventTimer = new StormTimer(null, new DefaultUncaughtExceptionHandler());
 
         this.blobUpdateTimer = new StormTimer("blob-update-timer", new DefaultUncaughtExceptionHandler());
+
+        if((Boolean)conf.get(Config.SUPERVISOR_OCL_ENABLE)){
+            // get the nativeServer's port
+            int port = Utils.getInt(conf.get(Config.SUPERVISOR_OCL_NATIVE_PORT));
+            this.deviceManager = new DeviceManager(this,port);
+        }
+
     }
     
     public String getId() {
@@ -187,7 +197,10 @@ public class Supervisor implements DaemonCommon, AutoCloseable {
     EventManager getEventManger() {
         return eventManager;
     }
-    
+
+    public DeviceManager getDeviceManager() {
+        return deviceManager;
+    }
     /**
      * Launch the supervisor
      */

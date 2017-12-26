@@ -17,9 +17,12 @@
  */
 package org.apache.storm.daemon.supervisor.timer;
 
+import clojure.lang.IFn;
 import org.apache.storm.Config;
 import org.apache.storm.cluster.IStormClusterState;
 import org.apache.storm.daemon.supervisor.Supervisor;
+import org.apache.storm.daemon.supervisor.oclDeviceManage.DeviceManager;
+import org.apache.storm.daemon.supervisor.oclDeviceManage.DeviceMetaData;
 import org.apache.storm.generated.SupervisorInfo;
 import org.apache.storm.utils.Time;
 import org.apache.storm.utils.Utils;
@@ -67,6 +70,19 @@ public class SupervisorHeartbeat implements Runnable {
         supervisorInfo.set_uptime_secs(supervisor.getUpTime().upTime());
         supervisorInfo.set_version(supervisor.getStormVersion());
         supervisorInfo.set_resources_map(mkSupervisorCapacities(conf));
+        // add by die_hu
+        DeviceManager dm = supervisor.getDeviceManager();
+        if(dm != null){
+            DeviceMetaData deviceMetaData = supervisor.getDeviceManager().getDeviceMetaData();
+            supervisorInfo.set_ocl_fpga_device_num(deviceMetaData.getOcl_fpga_device_num());
+            supervisorInfo.set_ocl_gpu_device_num(deviceMetaData.getOcl_gpu_device_num());
+            //
+        } else{
+            supervisorInfo.set_ocl_fpga_device_num(0);
+            supervisorInfo.set_ocl_gpu_device_num(0);
+            supervisorInfo.set_ocl_used_fpga_device_num(0);
+            supervisorInfo.set_ocl_used_gpu_device_num(0);
+        }
         return supervisorInfo;
     }
 

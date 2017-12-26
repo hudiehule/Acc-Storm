@@ -156,6 +156,10 @@ supervisor.monitor.frequency.secs: 3
 #how frequently the supervisor heartbeats to the cluster state (for nimbus)
 supervisor.heartbeat.frequency.secs: 5
 supervisor.enable: true
+#whether or not the supervisor support ocl acceleration
+supervisor.ocl.enable: true
+#the default port of the NativeServer
+supervisor.ocl.native.port: 8888
 supervisor.supervisors: []
 supervisor.supervisors.commands: []
 supervisor.memory.capacity.mb: 3072.0

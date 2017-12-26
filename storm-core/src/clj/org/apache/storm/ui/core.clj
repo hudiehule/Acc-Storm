@@ -355,6 +355,15 @@
            used-slots (reduce + (map #(.get_num_used_workers ^SupervisorSummary %) sups))
            total-slots (reduce + (map #(.get_num_workers ^SupervisorSummary %) sups))
            free-slots (- total-slots used-slots)
+
+           total-fpga-devices (reduce + (map #(.get_num_ocl_fpga_devices ^SupervisorSummary %) sups))
+           used-fpga-devices (reduce + (map #(.get_num_used_ocl_fpga_devices ^SupervisorSummary %) sups))
+           free-fpga-devices (- total-fpga-devices used-fpga-devices)
+
+           total-gpu-devices (reduce + (map #(.get_num_ocl_gpu_devices ^SupervisorSummary %) sups))
+           used-gpu-devices (reduce + (map #(.get_num_used_ocl_gpu_devices ^SupervisorSummary %) sups))
+           free-gpu-devices (- total-gpu-devices used-gpu-devices)
+
            topologies (.get_topologies_size summ)
            total-tasks (->> (.get_topologies summ)
                             (map #(.get_num_tasks ^TopologySummary %))
@@ -369,6 +378,12 @@
         "slotsTotal" total-slots
         "slotsUsed"  used-slots
         "slotsFree" free-slots
+        "oclFpgaDeviceTotal" total-fpga-devices
+        "oclFpgaDeviceUsed" used-fpga-devices
+        "oclFpgaDeviceFree" free-fpga-devices
+        "oclGpuDeviceTotal" total-gpu-devices
+        "oclGpuDeviceUsed" used-gpu-devices
+        "oclGpuDeviceFree" free-gpu-devices
         "executorsTotal" total-executors
         "tasksTotal" total-tasks })))
 
@@ -421,6 +436,10 @@
        "uptimeSeconds" (.get_uptime_secs s)
        "slotsTotal" (.get_num_workers s)
        "slotsUsed" (.get_num_used_workers s)
+       "oclFpgaDeviceTotal" (.get_num_ocl_fpga_devices s)
+       "oclFpgaDeviceUsed" (.get_num_used_ocl_fpga_devices s)
+       "oclGpuDeviceTotal" (.get_num_ocl_gpu_devices s)
+       "oclGpuDeviceUsed" (.get_num_used_ocl_gpu_devices s)
        "totalMem" (get (.get_total_resources s) Config/SUPERVISOR_MEMORY_CAPACITY_MB)
        "totalCpu" (get (.get_total_resources s) Config/SUPERVISOR_CPU_CAPACITY)
        "usedMem" (.get_used_mem s)
