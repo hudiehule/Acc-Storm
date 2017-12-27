@@ -80,9 +80,9 @@ public class SupervisorHeartbeat implements Runnable {
         } else{
             supervisorInfo.set_ocl_fpga_device_num(0);
             supervisorInfo.set_ocl_gpu_device_num(0);
-            supervisorInfo.set_ocl_used_fpga_device_num(0);
-            supervisorInfo.set_ocl_used_gpu_device_num(0);
         }
+        supervisorInfo.set_ocl_used_fpga_device_num(0);
+        supervisorInfo.set_ocl_used_gpu_device_num(0);
         return supervisorInfo;
     }
 
