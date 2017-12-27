@@ -148,10 +148,10 @@ $(document).ready(function() {
     $.getJSON("/api/v1/supervisor/summary",function(response,status,jqXHR) {
       getStatic("/templates/index-page-template.html", function(template) {
           supervisorSummary.append(Mustache.render($(template).filter("#supervisor-summary-template").html(),response));
-          //id, host, uptime, slots, used slots
+          //id, host, uptime, slots, used slots, fpgaDevices, used fpgaDeivces, gpuDevices, used gpuDevices
           dtAutoPage("#supervisor-summary-table", {
             columnDefs: [
-              {type: "num", targets: [3, 4]},
+              {type: "num", targets: [3, 4, 5, 6, 7, 8 ]},
               {type: "time-str", targets: [2]}
             ]
           });

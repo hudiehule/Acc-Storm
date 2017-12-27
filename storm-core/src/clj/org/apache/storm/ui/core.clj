@@ -378,12 +378,12 @@
         "slotsTotal" total-slots
         "slotsUsed"  used-slots
         "slotsFree" free-slots
-        "oclFpgaDeviceTotal" total-fpga-devices
-        "oclFpgaDeviceUsed" used-fpga-devices
-        "oclFpgaDeviceFree" free-fpga-devices
-        "oclGpuDeviceTotal" total-gpu-devices
-        "oclGpuDeviceUsed" used-gpu-devices
-        "oclGpuDeviceFree" free-gpu-devices
+        "oclFpgaDevicesTotal" total-fpga-devices
+        "oclFpgaDevicesUsed" used-fpga-devices
+        "oclFpgaDevicesFree" free-fpga-devices
+        "oclGpuDevicesTotal" total-gpu-devices
+        "oclGpuDevicesUsed" used-gpu-devices
+        "oclGpuDevicesFree" free-gpu-devices
         "executorsTotal" total-executors
         "tasksTotal" total-tasks })))
 
@@ -436,10 +436,10 @@
        "uptimeSeconds" (.get_uptime_secs s)
        "slotsTotal" (.get_num_workers s)
        "slotsUsed" (.get_num_used_workers s)
-       "oclFpgaDeviceTotal" (.get_num_ocl_fpga_devices s)
-       "oclFpgaDeviceUsed" (.get_num_used_ocl_fpga_devices s)
-       "oclGpuDeviceTotal" (.get_num_ocl_gpu_devices s)
-       "oclGpuDeviceUsed" (.get_num_used_ocl_gpu_devices s)
+       "oclFpgaDevicesTotal" (.get_num_ocl_fpga_devices s)
+       "oclFpgaDevicesUsed" (.get_num_used_ocl_fpga_devices s)
+       "oclGpuDevicesTotal" (.get_num_ocl_gpu_devices s)
+       "oclGpuDevicesUsed" (.get_num_used_ocl_gpu_devices s)
        "totalMem" (get (.get_total_resources s) Config/SUPERVISOR_MEMORY_CAPACITY_MB)
        "totalCpu" (get (.get_total_resources s) Config/SUPERVISOR_CPU_CAPACITY)
        "usedMem" (.get_used_mem s)
