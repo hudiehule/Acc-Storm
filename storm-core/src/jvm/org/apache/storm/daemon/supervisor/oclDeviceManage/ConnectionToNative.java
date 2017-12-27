@@ -28,10 +28,9 @@ public class ConnectionToNative {
             this.setName("NativeListener");
             try {
                 this.reader =  new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            }catch (Exception e){
+            }catch (Exception e) {
                 e.printStackTrace();
             }
-            this.start();
         }
         @Override
         public void run(){
