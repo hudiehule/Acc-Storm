@@ -19,16 +19,17 @@ public class DeviceManager {
     public DeviceManager(Supervisor supervisor,int port){
         this.supervisorId = supervisor.getId();
         this.supervisor = supervisor;
+        Socket conn = null;
         try {
-            Socket conn = new Socket("localhost", port);
+            conn = new Socket("localhost", port);
             conn.setTcpNoDelay(true);
-            this.connectionToNative = new ConnectionToNative(this,conn);
             isConnected = true;
             LOG.info("Connecting nativeServer at port %d",port);
         }catch(Exception e){
             isConnected = false;
-            LOG.error("DeviceManager can not connect the native machine!");
+            LOG.error(e.getMessage()+" DeviceManager can not connect the native machine!");
         }
+        this.connectionToNative = new ConnectionToNative(this,conn);
         requestMetaData();
     }
     public void requestMetaData(){

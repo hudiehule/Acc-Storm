@@ -35,7 +35,7 @@ public class ConnectionToNative {
         }
         @Override
         public void run(){
-            InputStream instream = null;
+          //  InputStream instream = null;
             try {
                 while ( listening ) {
                     // readLine是一个阻塞函数，当没有数据读取时，就一直会阻塞在那里，而不是返回null,并且只有遇到'/r','/n'或者“/r/n”才会返回
@@ -46,7 +46,7 @@ public class ConnectionToNative {
                     }
                     deviceManager.handleMessages(recvMsg);
                 }
-            } catch ( StreamCorruptedException sce) {
+            }/* catch ( StreamCorruptedException sce) {
                 // skip over the bad bytes
                 try {
                     if ( instream != null )
@@ -54,7 +54,7 @@ public class ConnectionToNative {
                 } catch ( Exception e1 ) {
                     listening = false;
                 }
-            } catch ( Exception e ) {
+            }*/ catch ( Exception e ) {
                 e.printStackTrace();
                 listening = false;
             }
