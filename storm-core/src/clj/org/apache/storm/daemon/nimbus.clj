@@ -440,13 +440,14 @@
 
         supervisor-details (dofor [[id info] supervisor-infos]
                              (SupervisorDetails. id (:meta info) (:resources-map info)))
-
+        ;;allSlotsAvailableForScheduling是INimbus接口中的一个方法,被standalone-nimbus实现 返回的是所有supervisor的WorkSlot对象的集合
         ret (.allSlotsAvailableForScheduling inimbus
                      supervisor-details
                      topologies
                      (set missing-assignment-topologies)
                      )
         ]
+    ;; 每个WorkSlot的supervisor-id和port形成一个向量，所有的向量组成一个列表返回
     (dofor [^WorkerSlot slot ret]
       [(.getNodeId slot) (.getPort slot)]
       )))
@@ -716,11 +717,12 @@
                                                    {})))]]
              {tid (SchedulerAssignmentImpl. tid executor->slot)})))
 
+;;创建的是所有的supervisor的SupervisorDetails对象，以<supervisor-id,SupervisorDetail>的集合返回
 (defn- read-all-supervisor-details [nimbus all-scheduling-slots supervisor->dead-ports]
   "return a map: {supervisor-id SupervisorDetails}"
   (let [storm-cluster-state (:storm-cluster-state nimbus)
         supervisor-infos (all-supervisor-info storm-cluster-state)
-        nonexistent-supervisor-slots (apply dissoc all-scheduling-slots (keys supervisor-infos))
+        nonexistent-supervisor-slots (apply dissoc all-scheduling-slots (keys supervisor-infos)) ;;计算supervisor已经不存在slots,可能是由于supervisor除了故障死掉
         all-supervisor-details (into {} (for [[sid supervisor-info] supervisor-infos
                                               :let [hostname (:hostname supervisor-info)
                                                     scheduler-meta (:scheduler-meta supervisor-info)
@@ -730,13 +732,14 @@
                                                     all-ports (-> (get all-scheduling-slots sid)
                                                                   (set/difference dead-ports)
                                                                   ((fn [ports] (map int ports))))
-                                                    supervisor-details (SupervisorDetails. sid hostname scheduler-meta all-ports (:resources-map supervisor-info))
+                                                    supervisor-details (SupervisorDetails. sid hostname scheduler-meta all-ports (:resources-map supervisor-info)
+                                                                        {"FPGA" (:ocl-fpga-device-num supervisor-info),"GPU" (:ocl-gpu-device-num)})
                                                     ]]
                                           {sid supervisor-details}))]
     (merge all-supervisor-details
            (into {}
               (for [[sid ports] nonexistent-supervisor-slots]
-                [sid (SupervisorDetails. sid nil ports)]))
+                [sid (SupervisorDetails. sid nil ports)]))  ;;创建了dead-ports所在的supervisor的SupervisorDetails对象
            )))
 
 (defn- compute-topology->executor->node+port [scheduler-assignments]
@@ -810,26 +813,33 @@
 
     new-topology->executor->node+port))
 
-;; public so it can be mocked out
+;; public so it can be mocked out 为所有Topologies计算新的调度
+;; existing-assignments是已经分配的任务集合 是一个<topology-id,Assignments>集合
+;; topologies表示Topologies对象
+;; scratch-topology-id 表示需要重新分配操作的topology-id
 (defn compute-new-scheduler-assignments [nimbus existing-assignments topologies scratch-topology-id]
   (let [conf (:conf nimbus)
         storm-cluster-state (:storm-cluster-state nimbus)
+        ;; compute-topology->executors 获取<topology-id,executors>集合，方法的实现实际上是对每一个topology-id调用compute-ecexutors方法获取到的
         topology->executors (compute-topology->executors nimbus (keys existing-assignments))
-        ;; update the executors heartbeats first.
+        ;; update the executors heartbeats first.更新所有topologies的Executor的心跳信息
         _ (update-all-heartbeats! nimbus existing-assignments topology->executors)
+        ;; 获取<topology-id,alive-executors>集合
         topology->alive-executors (compute-topology->alive-executors nimbus
                                                                      existing-assignments
                                                                      topologies
                                                                      topology->executors
                                                                      scratch-topology-id)
+        ;; 获取<supervisor-id,dead-ports>集合
         supervisor->dead-ports (compute-supervisor->dead-ports nimbus
                                                                existing-assignments
                                                                topology->executors
                                                                topology->alive-executors)
+        ;; 获取<topology-id, SchedulerAssignmentImpl> 转换ZooKeeper中的assignment为SchedulerAssignment
         topology->scheduler-assignment (compute-topology->scheduler-assignment nimbus
                                                                                existing-assignments
                                                                                topology->alive-executors)
-
+        ;; 计算missing-assignment-topologies 找出需要从新assign的Topology
         missing-assignment-topologies (->> topologies
                                            .getTopologies
                                            (map (memfn getId))
@@ -842,15 +852,18 @@
                                                                   (get t)
                                                                   num-used-workers )
                                                               (-> topologies (.getById t) .getNumWorkers)))))))
+        ;; 通过调用all-scheduling-slots得到所有Supervisor节点中可用的slot数量 得到的是所有的slots
         all-scheduling-slots (->> (all-scheduling-slots nimbus topologies missing-assignment-topologies)
                                   (map (fn [[node-id port]] {node-id #{port}}))
                                   (apply merge-with set/union))
-
+        ;; 调用read-all-supervisor-details得到所有的Supervisor节点SupervisorDetails
         supervisors (read-all-supervisor-details nimbus all-scheduling-slots supervisor->dead-ports)
+        ;; 创建Cluster对象
         cluster (Cluster. (:inimbus nimbus) supervisors topology->scheduler-assignment conf)
         _ (.setStatusMap cluster (deref (:id->sched-status nimbus)))
-        ;; call scheduler.schedule to schedule all the topologies
+        ;; call scheduler.schedule to schedule all the topologies 分配所有的topologies
         ;; the new assignments for all the topologies are in the cluster object.
+        ;;schedule方法有两个参数：topologies和cluster ;topologies包含所有Topology的静态信息 cluster中包含了Topology的运行态信息 根据这两者就可以进行真正的调度分配
         _ (.schedule (:scheduler nimbus) topologies cluster)
         _ (.setTopologyResourcesMap cluster @(:id->resources nimbus))
         _ (if-not (conf SCHEDULER-DISPLAY-RESOURCE) (.updateAssignedMemoryForTopologyAndSupervisor cluster topologies))
@@ -883,7 +896,8 @@
   (let [infos (all-supervisor-info storm-cluster-state)]
     (->> infos
          (map (fn [[id info]]
-                 [id (SupervisorDetails. id (:hostname info) (:scheduler-meta info) nil (:resources-map info))]))
+                 [id (SupervisorDetails. id (:hostname info) (:scheduler-meta info) nil (:resources-map info)
+                                         (hash-map "FPGA" (:ocl-fpga-device-num info) "GPU" (:ocl-gpu-device-num info)))]))
          (into {}))))
 
 (defn- to-worker-slot [[node port]]
@@ -894,25 +908,30 @@
 ;; figure out available slots on cluster. add to that the used valid slots to get total slots. figure out how many executors should be in each slot (e.g., 4, 4, 4, 5)
 ;; only keep existing slots that satisfy one of those slots. for rest, reassign them across remaining slots
 ;; edge case for slots with no executor timeout but with supervisor timeout... just treat these as valid slots that can be reassigned to. worst comes to worse the executor will timeout and won't assign here next time around
-(defnk mk-assignments [nimbus :scratch-topology-id nil]
+(defnk mk-assignments [nimbus :scratch-topology-id nil] ;;参数nimbus为nimbus-data对象,:scratch-topology-id为需要重新调度的Topology的id
   (if (is-leader nimbus :throw-exception false)
-    (let [conf (:conf nimbus)
+    (let [conf (:conf nimbus) ;;分别从nimbus-data中获取conf,storm-cluster-state和inimbus对象,并将其保存为临时变量
         storm-cluster-state (:storm-cluster-state nimbus)
         ^INimbus inimbus (:inimbus nimbus)
-        ;; read all the topologies
+        ;; read all the topologies ;;从zk中读取所有活跃的Topologies,获取他们id的集合
         topology-ids (.active-storms storm-cluster-state)
+          ;;根据前面得到的Topology-id的集合,对每一个id调用read-topology-details方法
+          ;;从参数nimbus-data中获取topology-details信息,并以<topology-id,topology-details>保存在集合中
         topologies (into {} (for [tid topology-ids]
                               {tid (read-topology-details nimbus tid)}))
+          ;;利用前面得到的<topology-id,topology-details>集合创建Topologies对象
         topologies (Topologies. topologies)
-        ;; read all the assignments
+        ;; read all the assignments in the cluster ;;读取所有已经分配资源的Topology的id的集合
         assigned-topology-ids (.assignments storm-cluster-state nil)
         existing-assignments (into {} (for [tid assigned-topology-ids]
                                         ;; for the topology which wants rebalance (specified by the scratch-topology-id)
                                         ;; we exclude its assignment, meaning that all the slots occupied by its assignment
                                         ;; will be treated as free slot in the scheduler code.
+                                        ;; 对于那些已经分配资源但需要重新调度的Topology(由scratch-topology-id指定),
+                                        ;; 我们忽略其之前的分配，故之前分配占用的所有slot将被视为空闲slot(空闲资源),可重新被调度使用。
                                         (when (or (nil? scratch-topology-id) (not= tid scratch-topology-id))
                                           {tid (.assignment-info storm-cluster-state tid nil)})))
-        ;; make the new assignments for topologies
+        ;; make the new assignments for topologies 调用compute-new-scheduler-assignments方法为所有Topologies计算新的调度
         new-scheduler-assignments (compute-new-scheduler-assignments
                                        nimbus
                                        existing-assignments
@@ -1842,7 +1861,9 @@
                                        (.set_requested_cpu topo-summ (get resources 2))
                                        (.set_assigned_memonheap topo-summ (get resources 3))
                                        (.set_assigned_memoffheap topo-summ (get resources 4))
-                                       (.set_assigned_cpu topo-summ (get resources 5)))
+                                       (.set_assigned_cpu topo-summ (get resources 5))
+                                       (.set_assigned_fpga_devices topo-summ (get resources 6))
+                                       (.set_assigned_gpu_devices topo-summ (get resources 7)))
                                      (.set_replication_count topo-summ (get-blob-replication-count (master-stormcode-key id) nimbus))
                                      topo-summ))
               ret (ClusterSummary. supervisor-summaries
@@ -1907,7 +1928,9 @@
               (.set_requested_cpu topo-info (get resources 2))
               (.set_assigned_memonheap topo-info (get resources 3))
               (.set_assigned_memoffheap topo-info (get resources 4))
-              (.set_assigned_cpu topo-info (get resources 5)))
+              (.set_assigned_cpu topo-info (get resources 5))
+              (.set_assigned_fpga_devices topo-info (get resources 6))      ;; add
+              (.set_assigned_gpu_devices topo-info (get resources 7)))      ;; add
             (when-let [component->debug (:component->debug base)]
               (.set_component_debug topo-info (map-val converter/thriftify-debugoptions component->debug)))
             (.set_replication_count topo-info (get-blob-replication-count (master-stormcode-key storm-id) nimbus))

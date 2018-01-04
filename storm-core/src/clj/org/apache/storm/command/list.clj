@@ -33,6 +33,8 @@
                   topology-status (.get_status topology)
                   topology-num-tasks (.get_num_tasks topology)
                   topology-num-workers (.get_num_workers topology)
+                  topology-num-ocl-fpga-devices (.get_assigned_fpga_devices topology)
+                  topology-num-ocl-gpu-devices (.get_assigned_gpu_devices topology)
                   topology-uptime-secs (.get_uptime_secs topology)]
               (println (format msg-format  topology-name topology-status topology-num-tasks
                                topology-num-workers topology-uptime-secs)))))))))

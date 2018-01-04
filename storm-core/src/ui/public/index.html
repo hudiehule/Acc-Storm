@@ -135,10 +135,10 @@ $(document).ready(function() {
     $.getJSON("/api/v1/topology/summary",function(response,status,jqXHR) {
       getStatic("/templates/index-page-template.html", function(template) {
           topologySummary.append(Mustache.render($(template).filter("#topology-summary-template").html(),response));
-          //name, owner, status, uptime, num workers, num executors, num tasks, replication count, assigned total mem, assigned total cpu, scheduler info
+          //name, owner, status, uptime, num workers, num executors, num tasks, replication count, assigned total fpgaDevices, assigned total gpuDevices, assigned total mem, assigned total cpu, scheduler info
           dtAutoPage("#topology-summary-table", {
             columnDefs: [
-              {type: "num", targets: [4, 5, 6, 7, 8, 9]},
+              {type: "num", targets: [4, 5, 6, 7, 8, 9, 10, 11]},
               {type: "time-str", targets: [3]}
             ]
           });

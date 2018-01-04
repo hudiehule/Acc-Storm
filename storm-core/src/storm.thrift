@@ -144,6 +144,7 @@ exception KeyAlreadyExistsException {
   1: required string msg;
 }
 
+// modified by die hu
 struct TopologySummary {
   1: required string id;
   2: required string name;
@@ -161,6 +162,8 @@ struct TopologySummary {
 524: optional double assigned_memonheap;
 525: optional double assigned_memoffheap;
 526: optional double assigned_cpu;
+527: optional double assigned_fpga_devices;
+528: optional double assigned_gpu_devices;
 }
 
 //Modified by Die Hu, add opencl devices info
@@ -250,6 +253,7 @@ struct DebugOptions {
   2: optional double samplingpct
 }
 
+// modified by die hu
 struct TopologyInfo {
   1: required string id;
   2: required string name;
@@ -267,6 +271,8 @@ struct TopologyInfo {
 524: optional double assigned_memonheap;
 525: optional double assigned_memoffheap;
 526: optional double assigned_cpu;
+527: optional double assigned_fpga_devices; // add
+528: optional double assigned_gpu_devices; // add
 }
 
 struct CommonAggregateStats {

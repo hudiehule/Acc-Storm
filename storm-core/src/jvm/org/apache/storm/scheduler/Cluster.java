@@ -422,6 +422,38 @@ public class Cluster {
     }
 
     /**
+     * add by die hu,get the used fpga devices number of each supervisor
+     * @param sup
+     * @return
+     */
+    public HashMap<String,Integer> getUsedFpgaDevices(SupervisorDetails sup){
+        HashMap<String,Integer> ret = new HashMap<>();
+        int fCount = 0;
+        for(SchedulerAssignmentImpl s: assignments.values()){
+           //获取assignments中的accelerator的executor
+            Map<ExecutorDetails, WorkerSlot> executorToSlot = s.getExecutorToSlot();
+
+        }
+        return ret;
+    }
+
+    /**
+     * add by die hu, get the used gpu devices number of each supervisor
+     * @param sup
+     * @return
+     */
+    public HashMap<String,Integer> getUsedGpuDevices(SupervisorDetails sup){
+        HashMap<String,Integer> ret = new HashMap<>();
+        int gCount = 0;
+        for(SchedulerAssignmentImpl s: assignments.values()){
+            //获取assignments中的accelerator的executor
+            Map<ExecutorDetails, WorkerSlot> executorToSlot = s.getExecutorToSlot();
+
+        }
+        return ret;
+    }
+
+    /**
      * Get all the supervisors on the specified <code>host</code>.
      * 
      * @param host hostname of the supervisor
@@ -490,6 +522,20 @@ public class Cluster {
             sum += sup.getTotalMemory();
         }
         return sum;
+    }
+
+    /**
+     * Get the total amount of opencl devices in cluster
+     * @return an array which has only two elements,the first element of the returned array represents  fpga's number
+     * the second element of the returned array represents the number of gpu devices
+     */
+    public int[] getClusterTotalOclDevicesNum(){
+       int[] devicesSum = new int[2];
+       for(SupervisorDetails sup : this.supervisors.values()){
+           devicesSum[0] += sup.getTotalFPGA();
+           devicesSum[1] += sup.getTotalGPU();
+       }
+       return devicesSum;
     }
 
     /*
@@ -665,7 +711,7 @@ public class Cluster {
      * Set the amount of resources used used by a topology. Used for displaying resource information on the UI
      * @param topologyId
      * @param resources describes the resources requested and assigned to topology in the following format in an array:
-     *  {requestedMemOnHeap, requestedMemOffHeap, requestedCpu, assignedMemOnHeap, assignedMemOffHeap, assignedCpu}
+     *  {requestedMemOnHeap, requestedMemOffHeap, requestedCpu, assignedMemOnHeap, assignedMemOffHeap, assignedCpu, assignedFpgaDevices, assignedGpuDevices}
      */
     public void setTopologyResources(String topologyId, Double[] resources) {
         this.topologyResources.put(topologyId, resources);
@@ -675,7 +721,7 @@ public class Cluster {
      * Set the amount of resources used used by a topology. Used for displaying resource information on the UI
      * @param topologyResources a map that contains multiple topologies and the resources the topology requested and assigned.
      * Key: topology id Value: an array that describes the resources the topology requested and assigned in the following format:
-     *  {requestedMemOnHeap, requestedMemOffHeap, requestedCpu, assignedMemOnHeap, assignedMemOffHeap, assignedCpu}
+     *  {requestedMemOnHeap, requestedMemOffHeap, requestedCpu, assignedMemOnHeap, assignedMemOffHeap, assignedCpu, assignedFpgaDevices, assignedGpuDevices}
      */
     public void setTopologyResourcesMap(Map<String, Double[]> topologyResources) {
         this.topologyResources.putAll(topologyResources);

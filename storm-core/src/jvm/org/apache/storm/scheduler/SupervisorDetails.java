@@ -34,13 +34,16 @@ public class SupervisorDetails {
      * hostname of this supervisor
      */
     String host;
+    /** add by die hu
+     * all the ports of this supervisor is a List<long>
+     */
     Object meta;
     /**
      * meta data configured for this supervisor
      */
     Object schedulerMeta;
     /**
-     * all the ports of the supervisor
+     * all the ports of the supervisor which are alive
      */
     Set<Integer> allPorts;
     /**
@@ -48,8 +51,13 @@ public class SupervisorDetails {
      */
     private Map<String, Double> _total_resources;
 
+    /**
+     * Array containing two integers and the first represents the fpga device number and the other represents the gpu device number
+     */
+    private Map<String,Integer> _total_ocl_devices;
+
     public SupervisorDetails(String id, String host, Object meta, Object schedulerMeta,
-                             Collection<Number> allPorts, Map<String, Double> total_resources){
+                             Collection<Number> allPorts, Map<String, Double> total_resources,Map<String,Integer> devices){
 
         this.id = id;
         this.host = host;
@@ -61,28 +69,44 @@ public class SupervisorDetails {
             this.allPorts = new HashSet<>();
         }
         this._total_resources = total_resources;
+        this._total_ocl_devices = devices;
         LOG.debug("Creating a new supervisor ({}-{}) with resources: {}", this.host, this.id, total_resources);
     }
 
     public SupervisorDetails(String id, Object meta){
-        this(id, null, meta, null, null, null);
+        this(id, null, meta, null, null, null,null);
     }
 
     public SupervisorDetails(String id, Object meta, Map<String, Double> total_resources) {
-        this(id, null, meta, null, null, total_resources);
+        this(id, null, meta, null, null, total_resources,null);
     }
 
     public SupervisorDetails(String id, Object meta, Collection<Number> allPorts){
-        this(id, null, meta, null, allPorts, null);
+        this(id, null, meta, null, allPorts, null,null);
     }
 
     public SupervisorDetails(String id, String host, Object schedulerMeta, Collection<Number> allPorts) {
-        this(id, host, null, schedulerMeta, allPorts, null);
+        this(id, host, null, schedulerMeta, allPorts, null,null);
     }
 
     public SupervisorDetails(String id, String host, Object schedulerMeta,
                              Collection<Number> allPorts, Map<String, Double> total_resources) {
-        this(id, host, null, schedulerMeta, allPorts, total_resources);
+        this(id, host, null, schedulerMeta, allPorts, total_resources,null);
+    }
+
+    /**
+     * add by die hu
+     * @param id
+     * @param meta
+     * @param _total_resources
+     * @param devices
+     */
+    public SupervisorDetails(String id, Object meta,Map<String, Double> _total_resources,Map<String,Integer> devices ){
+        this(id,null,meta,null,null,_total_resources,devices);
+    }
+    public SupervisorDetails(String id, String host, Object schedulerMeta,
+                             Collection<Number> allPorts, Map<String, Double> total_resources,Map<String,Integer> devices){
+        this(id, host, null, schedulerMeta, allPorts, total_resources,devices);
     }
 
     private void setAllPorts(Collection<Number> allPorts) {
@@ -128,5 +152,19 @@ public class SupervisorDetails {
         Double totalCPU = getTotalResource(Config.SUPERVISOR_CPU_CAPACITY);
         assert totalCPU != null;
         return totalCPU;
+    }
+
+    public Integer getTotalDevices(String type){
+        return this._total_ocl_devices.get(type);
+    }
+    public Integer getTotalFPGA(){
+        Integer totalFPGA = getTotalDevices("FPGA");
+        assert totalFPGA != null;
+        return totalFPGA;
+    }
+    public Integer getTotalGPU(){
+        Integer totalGPU = getTotalDevices("GPU");
+        assert totalGPU != null;
+        return totalGPU;
     }
 }

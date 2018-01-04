@@ -477,7 +477,9 @@
        "assignedMemOnHeap" (.get_assigned_memonheap t)
        "assignedMemOffHeap" (.get_assigned_memoffheap t)
        "assignedTotalMem" (+ (.get_assigned_memonheap t) (.get_assigned_memoffheap t))
-       "assignedCpu" (.get_assigned_cpu t)})
+       "assignedCpu" (.get_assigned_cpu t)
+       "assignedFpgaDevices" (.get_assigned_fpga_devices t)
+       "assignedGpuDevices" (.get_assigned_gpu_devices t)})
     "schedulerDisplayResource" (*STORM-CONF* Config/SCHEDULER_DISPLAY_RESOURCE)}))
 
 (defn topology-stats [window stats]
@@ -603,6 +605,8 @@
      "assignedMemOffHeap" (.get_assigned_memoffheap topo-info)
      "assignedTotalMem" (+ (.get_assigned_memonheap topo-info) (.get_assigned_memoffheap topo-info))
      "assignedCpu" (.get_assigned_cpu topo-info)
+     "assignedFpgaDevices" (.get_assigned_fpga_devices topo-info)
+     "assignedGpuDevices" (.get_assigned_gpu_devices topo-info)
      "topologyStats" topo-stats
      "spouts" (map (partial comp-agg-stats-json id secure?)
                    (.get_id_to_spout_agg_stats topo-info))
