@@ -733,7 +733,7 @@
                                                                   (set/difference dead-ports)
                                                                   ((fn [ports] (map int ports))))
                                                     supervisor-details (SupervisorDetails. sid hostname scheduler-meta all-ports (:resources-map supervisor-info)
-                                                                                           (:ocl-fpga-device-num info) (:ocl-gpu-device-num info))]]
+                                                                                           (:ocl-fpga-device-num supervisor-info) (:ocl-gpu-device-num supervisor-info))]]
                                           {sid supervisor-details}))]
     (merge all-supervisor-details
            (into {}
