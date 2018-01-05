@@ -66,7 +66,7 @@ public class SupervisorDetails {
             this.allPorts = new HashSet<>();
         }
         this._total_resources = total_resources;
-        if(_total_resources == null){
+        if(_total_ocl_devices == null){
             _total_ocl_devices = new HashMap<>();
         }
         this._total_ocl_devices.put("FPGA",fdevices);
