@@ -17,10 +17,7 @@
  */
 package org.apache.storm.scheduler;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.storm.Config;
 import org.slf4j.Logger;
@@ -69,6 +66,9 @@ public class SupervisorDetails {
             this.allPorts = new HashSet<>();
         }
         this._total_resources = total_resources;
+        if(_total_resources == null){
+            _total_ocl_devices = new HashMap<>();
+        }
         this._total_ocl_devices.put("FPGA",fdevices);
         this._total_ocl_devices.put("GPU",gdevices);
         LOG.debug("Creating a new supervisor ({}-{}) with resources: {}", this.host, this.id, total_resources);
