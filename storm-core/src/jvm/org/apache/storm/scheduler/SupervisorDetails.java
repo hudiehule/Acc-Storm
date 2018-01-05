@@ -57,7 +57,7 @@ public class SupervisorDetails {
     private Map<String,Integer> _total_ocl_devices;
 
     public SupervisorDetails(String id, String host, Object meta, Object schedulerMeta,
-                             Collection<Number> allPorts, Map<String, Double> total_resources,Map<String,Integer> devices){
+                             Collection<Number> allPorts, Map<String, Double> total_resources,int fdevices,int gdevices){
 
         this.id = id;
         this.host = host;
@@ -69,29 +69,30 @@ public class SupervisorDetails {
             this.allPorts = new HashSet<>();
         }
         this._total_resources = total_resources;
-        this._total_ocl_devices = devices;
+        this._total_ocl_devices.put("FPGA",fdevices);
+        this._total_ocl_devices.put("GPU",gdevices);
         LOG.debug("Creating a new supervisor ({}-{}) with resources: {}", this.host, this.id, total_resources);
     }
 
     public SupervisorDetails(String id, Object meta){
-        this(id, null, meta, null, null, null,null);
+        this(id, null, meta, null, null, null,0,0);
     }
 
     public SupervisorDetails(String id, Object meta, Map<String, Double> total_resources) {
-        this(id, null, meta, null, null, total_resources,null);
+        this(id, null, meta, null, null, total_resources,0,0);
     }
 
     public SupervisorDetails(String id, Object meta, Collection<Number> allPorts){
-        this(id, null, meta, null, allPorts, null,null);
+        this(id, null, meta, null, allPorts, null,0,0);
     }
 
     public SupervisorDetails(String id, String host, Object schedulerMeta, Collection<Number> allPorts) {
-        this(id, host, null, schedulerMeta, allPorts, null,null);
+        this(id, host, null, schedulerMeta, allPorts, null,0,0);
     }
 
     public SupervisorDetails(String id, String host, Object schedulerMeta,
                              Collection<Number> allPorts, Map<String, Double> total_resources) {
-        this(id, host, null, schedulerMeta, allPorts, total_resources,null);
+        this(id, host, null, schedulerMeta, allPorts, total_resources,0,0);
     }
 
     /**
@@ -99,14 +100,15 @@ public class SupervisorDetails {
      * @param id
      * @param meta
      * @param _total_resources
-     * @param devices
+     * @param fdevices
+     * @param gdevices
      */
-    public SupervisorDetails(String id, Object meta,Map<String, Double> _total_resources,Map<String,Integer> devices ){
-        this(id,null,meta,null,null,_total_resources,devices);
+    public SupervisorDetails(String id, Object meta,Map<String, Double> _total_resources,int fdevices,int gdevices ){
+        this(id,null,meta,null,null,_total_resources,fdevices,gdevices);
     }
     public SupervisorDetails(String id, String host, Object schedulerMeta,
-                             Collection<Number> allPorts, Map<String, Double> total_resources,Map<String,Integer> devices){
-        this(id, host, null, schedulerMeta, allPorts, total_resources,devices);
+                             Collection<Number> allPorts, Map<String, Double> total_resources,int fdevices,int gdevices){
+        this(id, host, null, schedulerMeta, allPorts, total_resources,fdevices,gdevices);
     }
 
     private void setAllPorts(Collection<Number> allPorts) {

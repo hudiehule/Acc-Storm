@@ -733,8 +733,7 @@
                                                                   (set/difference dead-ports)
                                                                   ((fn [ports] (map int ports))))
                                                     supervisor-details (SupervisorDetails. sid hostname scheduler-meta all-ports (:resources-map supervisor-info)
-                                                                        {"FPGA" (:ocl-fpga-device-num supervisor-info),"GPU" (:ocl-gpu-device-num)})
-                                                    ]]
+                                                                                           (:ocl-fpga-device-num info) (:ocl-gpu-device-num info))]]
                                           {sid supervisor-details}))]
     (merge all-supervisor-details
            (into {}
@@ -897,7 +896,7 @@
     (->> infos
          (map (fn [[id info]]
                  [id (SupervisorDetails. id (:hostname info) (:scheduler-meta info) nil (:resources-map info)
-                                         (hash-map "FPGA" (:ocl-fpga-device-num info) "GPU" (:ocl-gpu-device-num info)))]))
+                                         (:ocl-fpga-device-num info) (:ocl-gpu-device-num info))]))
          (into {}))))
 
 (defn- to-worker-slot [[node port]]
