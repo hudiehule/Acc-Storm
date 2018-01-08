@@ -995,7 +995,8 @@
       (try (.notify topology-action-notifier storm-id action)
         (catch Exception e
         (log-warn-error e "Ignoring exception from Topology action notifier for storm-Id " storm-id))))))
-
+;;读取整个集群的配置信息、nimbus的配置信息、从stormconf.ser反序列化topology配置信息和从stormcode.ser反 序列化出topology，
+;; 然后通过调用activate-storm!函数将topology的元数据StormBase对象写入zookeeper的 /storm/storms/{topology id}文件中
 (defn- start-storm [nimbus storm-name storm-id topology-initial-status]
   {:pre [(#{:active :inactive} topology-initial-status)]}
   (let [storm-cluster-state (:storm-cluster-state nimbus)
@@ -1097,6 +1098,7 @@
       (min max-parallelism num-tasks)
       num-tasks)))
 
+;;用于计算提交的topology中每个组件的并行度并且更新该组件的TOPOLOGY-TASKS配置项
 (defn normalize-topology [storm-conf ^StormTopology topology]
   (let [ret (.deepCopy topology)]
     (doseq [[_ component] (all-components ret)]

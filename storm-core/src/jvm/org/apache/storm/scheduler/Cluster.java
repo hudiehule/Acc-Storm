@@ -666,7 +666,7 @@ public class Cluster {
                 Double[] topo_resources = getTopologyResourcesMap().get(topId);
                 topo_resources[3] = assignedMemForTopology;
             } else {
-                Double[] topo_resources = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+                Double[] topo_resources = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
                 topo_resources[3] = assignedMemForTopology;
                 this.setTopologyResources(topId, topo_resources);
             }
@@ -678,7 +678,7 @@ public class Cluster {
                 Double[] supervisor_resources = supervisorsResources.get(nodeId);
                 supervisor_resources[2] = entry.getValue();
             } else {
-                Double[] supervisor_resources = {0.0, 0.0, 0.0, 0.0};
+                Double[] supervisor_resources = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
                 supervisor_resources[2] = entry.getValue();
                 this.supervisorsResources.put(nodeId, supervisor_resources);
             }
