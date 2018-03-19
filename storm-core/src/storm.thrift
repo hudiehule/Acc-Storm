@@ -102,6 +102,7 @@ struct SpoutSpec {
 struct Bolt {
   1: required ComponentObject bolt_object;
   2: required ComponentCommon common;
+  3: required bool isAccBolt; // add 是否是可加速的bolt
 }
 
 // not implemented yet
@@ -115,9 +116,11 @@ struct StormTopology {
   //ids must be unique across maps
   // #workers to use is in conf
   1: required map<string, SpoutSpec> spouts;
-  2: required map<string, Bolt> bolts;
+  2: required map<string, Bolt> bolts; //包含了所有的bolts 包括了accbolts
   3: required map<string, StateSpoutSpec> state_spouts;
   4: optional list<binary> worker_hooks;
+  5: optional string kernelFileStr; //add 以字符的形式存放kernel文件
+  6: optional map<string, Bolt> acc_bolts; //保存acc_bolts
 }
 
 exception AlreadyAliveException {
@@ -162,8 +165,8 @@ struct TopologySummary {
 524: optional double assigned_memonheap;
 525: optional double assigned_memoffheap;
 526: optional double assigned_cpu;
-527: optional double assigned_fpga_devices;
-528: optional double assigned_gpu_devices;
+527: optional double assigned_fpga_devices; // add
+528: optional double assigned_gpu_devices;  // add
 }
 
 //Modified by Die Hu, add opencl devices info
@@ -237,6 +240,8 @@ struct ExecutorStats {
 struct ExecutorInfo {
   1: required i32 task_start;
   2: required i32 task_end;
+  3: bool isAccExecutor; //add
+  4: optional bool isAssignedAccExecutor;//add
 }
 
 struct ExecutorSummary {
@@ -245,7 +250,7 @@ struct ExecutorSummary {
   3: required string host;
   4: required i32 port;
   5: required i32 uptime_secs;
-  7: optional ExecutorStats stats;
+  6: optional ExecutorStats stats;
 }
 
 struct DebugOptions {
@@ -295,6 +300,10 @@ struct BoltAggregateStats {
 4: optional double capacity;
 }
 
+struct AccBoltAggregateStates {
+
+}
+
 union SpecificAggregateStats {
 1: BoltAggregateStats  bolt;
 2: SpoutAggregateStats spout;
@@ -302,7 +311,8 @@ union SpecificAggregateStats {
 
 enum ComponentType {
   BOLT = 1,
-  SPOUT = 2
+  SPOUT = 2,
+  ACCBOLT = 3,   //ADD
 }
 
 struct ComponentAggregateStats {
@@ -342,6 +352,8 @@ struct TopologyPageInfo {
 524: optional double assigned_memonheap;
 525: optional double assigned_memoffheap;
 526: optional double assigned_cpu;
+527: optional double assigned_fpga_devices; // add
+528: optional double assigned_gpu_devices; // add
 }
 
 struct ExecutorAggregateStats {
@@ -456,9 +468,10 @@ struct WorkerResources {
 struct Assignment {
     1: required string master_code_dir;
     2: optional map<string, string> node_host = {};
-    3: optional map<list<i64>, NodeInfo> executor_node_port = {};
-    4: optional map<list<i64>, i64> executor_start_time_secs = {};
+    3: optional map<ExecutorInfo, NodeInfo> executor_node_port = {}; // modify
+    4: optional map<ExecutorInfo, i64> executor_start_time_secs = {}; // modify
     5: optional map<NodeInfo, WorkerResources> worker_resources = {};
+    6: optional map<NodeInfo,double> device_resources = {}; // add
 }
 
 enum TopologyStatus {
@@ -477,12 +490,13 @@ struct StormBase {
     1: required string name;
     2: required TopologyStatus status;
     3: required i32 num_workers;
-    4: optional map<string, i32> component_executors;
-    5: optional i32 launch_time_secs;
-    6: optional string owner;
-    7: optional TopologyActionOptions topology_action_options;
-    8: optional TopologyStatus prev_status;//currently only used during rebalance action.
-    9: optional map<string, DebugOptions> component_debug; // topology/component level debug option.
+    4: optional map<string, i32> component_executors; //<componentId,parallelism_hint> 所有组件的并行度
+    5: optional map<string, i32> acc_component_executors;//add  可加速组件的并行度
+    6: optional i32 launch_time_secs;
+    7: optional string owner;
+    8: optional TopologyActionOptions topology_action_options;
+    9: optional TopologyStatus prev_status;//currently only used during rebalance action.
+    10: optional map<string, DebugOptions> component_debug; // topology/component level debug option.
 }
 
 struct ClusterWorkerHeartbeat {

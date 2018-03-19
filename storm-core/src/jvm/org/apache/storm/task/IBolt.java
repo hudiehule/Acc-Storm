@@ -72,7 +72,6 @@ public interface IBolt extends Serializable {
      * @param input The input tuple to be processed.
      */
     void execute(Tuple input);
-
     /**
      * Called when an IBolt is going to be shutdown. There is no guarentee that cleanup
      * will be called, because the supervisor kill -9's worker processes on the cluster.

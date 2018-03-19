@@ -221,7 +221,7 @@
   [inputs bolt outputs :p nil :conf nil]
   (let [common (mk-plain-component-common (mk-inputs inputs) outputs p :conf conf)]
     (Bolt. (ComponentObject/serialized_java (Utils/javaSerialize bolt))
-           common)))
+           common false)))                                  ;;这里的false表示isAccBolt的值为false
 
 (defnk mk-spout-spec
   [spout :parallelism-hint nil :p nil :conf nil]
@@ -278,7 +278,11 @@
 (def STORM-TOPOLOGY-FIELDS
   (-> StormTopology/metaDataMap clojurify-structure keys))
 
+(def STORM-TOPOLOGY-FIELDS-EXECLUDE-ACCBOLT
+  (-> (.remove StormTopology/metaDataMap StormTopology$_Fields/ACC_BOLTS) clojurify-structure keys))
+
 (def SPOUT-FIELDS
   [StormTopology$_Fields/SPOUTS
    StormTopology$_Fields/STATE_SPOUTS])
-
+(def BOLT-FIELDS
+  [StormTopology$_Fields/BOLTS])

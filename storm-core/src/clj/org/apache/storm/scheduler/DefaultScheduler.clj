@@ -55,20 +55,21 @@
   (let [needs-scheduling-topologies (.needsSchedulingTopologies cluster topologies)]
     (doseq [^TopologyDetails topology needs-scheduling-topologies
             :let [topology-id (.getId topology)
-                  available-slots (->> (.getAvailableSlots cluster)
+                  available-slots (->> (.getAvailableSlots cluster) ;;获取集群中可用的slots
                                        (map #(vector (.getNodeId %) (.getPort %))))
-                  all-executors (->> topology
+                  ;;  supervisorid-available-devices (.getAvailableFpgaDevices cluster) ;;获取集群中可用的devices设备   add
+                  all-executors (->> topology               ;;计算该拓扑的所有executors all-executors是这样的形式[[startTaskId,endTaskId],[startTaskId,endTaskId],......]
                                      .getExecutors
                                      (map #(vector (.getStartTask %) (.getEndTask %)))
                                      set)
-                  alive-assigned (EvenScheduler/get-alive-assigned-node+port->executors cluster topology-id)
-                  alive-executors (->> alive-assigned vals (apply concat) set)
-                  can-reassign-slots (slots-can-reassign cluster (keys alive-assigned))
-                  total-slots-to-use (min (.getNumWorkers topology)
+                  alive-assigned (EvenScheduler/get-alive-assigned-node+port->executors cluster topology-id) ;;获取这个topology已经分配到的任务，alive-assigned是<node+port->executor>的一个map
+                  alive-executors (->> alive-assigned vals (apply concat) set) ;;计算已经分配的executors alive-executors是executor的一个set
+                  can-reassign-slots (slots-can-reassign cluster (keys alive-assigned)) ;;对alive-assigned中的slots信息进行判断，选出其中可被重新分配的slots集合并保存到can-reassign-slots中
+                  total-slots-to-use (min (.getNumWorkers topology) ;;计算当前topology所能使用的最大slots数目
                                           (+ (count can-reassign-slots) (count available-slots)))
-                  bad-slots (if (or (> total-slots-to-use (count alive-assigned)) 
+                  bad-slots (if (or (> total-slots-to-use (count alive-assigned)) ;;如果当前的topology能使用的最大slots数量大于当前已经分配的slots数目
                                     (not= alive-executors all-executors))
-                                (bad-slots alive-assigned (count all-executors) total-slots-to-use)
+                                (bad-slots alive-assigned (count all-executors) total-slots-to-use) ;;计算当前topology已经被分配的资源中有哪些是不再需要的
                                 [])]]
       (.freeSlots cluster bad-slots)
       (EvenScheduler/schedule-topologies-evenly (Topologies. {topology-id topology}) cluster))))

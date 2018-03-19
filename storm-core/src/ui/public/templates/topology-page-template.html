@@ -69,6 +69,16 @@
           </span>
         </th>
         <th>
+          <span data-toggle="tooltip" data-placement="above" title="Assigned FPGA Devices by Scheduler.">
+            Assigned FPGA Devices
+          </span>
+        </th>
+        <th>
+          <span data-toggle="tooltip" data-placement="above" title="Assigned GPU Devices by Scheduler.">
+            Assigned GPU Devices
+          </span>
+        </th>
+        <th>
           <span data-toggle="tooltip" data-placement="left" title="This shows information from the scheduler about the latest attempt to schedule the Topology on the cluster.">
             Scheduler Info
           </span>
@@ -87,6 +97,8 @@
         <td>{{tasksTotal}}</td>
         <td>{{replicationCount}}</td>
         <td>{{assignedTotalMem}}</td>
+        <td>{{assignedFpgaDevices}}</td>
+        <td>{{assignedGpuDevices}}</td>
         <td>{{schedulerInfo}}</td>
       </tr>
     </tbody>

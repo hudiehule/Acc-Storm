@@ -26,13 +26,14 @@ import org.apache.storm.spout.CheckpointSpout;
 import org.apache.storm.state.State;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.base.BaseAccBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.utils.Utils;
 import org.json.simple.JSONValue;
 import org.json.simple.parser.ParseException;
 
-import java.io.NotSerializableException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,7 +43,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.storm.windowing.TupleWindow;
-import org.json.simple.JSONValue;
+
 import static org.apache.storm.spout.CheckpointSpout.CHECKPOINT_COMPONENT_ID;
 import static org.apache.storm.spout.CheckpointSpout.CHECKPOINT_STREAM_ID;
 
@@ -99,11 +100,14 @@ import static org.apache.storm.spout.CheckpointSpout.CHECKPOINT_STREAM_ID;
  * the inputs for that component.
  */
 public class TopologyBuilder {
-    private Map<String, IRichBolt> _bolts = new HashMap<>();
+    private Map<String, IRichBolt> _bolts = new HashMap<>();//保存的是一般的bolt不能被加速的
+    private Map<String, IRichBolt> _accGeneralBolts = new HashMap<>(); // bolts that can be accelerated in FPGA or GPU
+    private Map<String, IAccBolt> _accBolts = new HashMap<>(); // _accGeneralBolts保存的是可被加速的Bolt的原生形式IRichBolt 而_accBolts中保存的是可被加速的Bolt的acc形式 IAccBolt，里面包含了accBolt的方法
     private Map<String, IRichSpout> _spouts = new HashMap<>();
     private Map<String, ComponentCommon> _commons = new HashMap<>();
     private boolean hasStatefulBolt = false;
 
+    private String _kernelFileStr;
 //    private Map<String, Map<GlobalStreamId, Grouping>> _inputs = new HashMap<String, Map<GlobalStreamId, Grouping>>();
 
     private Map<String, StateSpoutSpec> _stateSpouts = new HashMap<>();
@@ -113,6 +117,10 @@ public class TopologyBuilder {
     public StormTopology createTopology() {
         Map<String, Bolt> boltSpecs = new HashMap<>();
         Map<String, SpoutSpec> spoutSpecs = new HashMap<>();
+        Map<String,Bolt> accBoltSpecs = new HashMap<>();
+        for(String id : _accBolts.keySet()){
+            if(!_accGeneralBolts.containsKey(id)) _accBolts.remove(id);
+        }
         maybeAddCheckpointSpout();
         for(String boltId: _bolts.keySet()) {
             IRichBolt bolt = _bolts.get(boltId);
@@ -120,13 +128,32 @@ public class TopologyBuilder {
             ComponentCommon common = getComponentCommon(boltId, bolt);
             try{
                 maybeAddCheckpointInputs(common);
-                boltSpecs.put(boltId, new Bolt(ComponentObject.serialized_java(Utils.javaSerialize(bolt)), common));
+                boltSpecs.put(boltId, new Bolt(ComponentObject.serialized_java(Utils.javaSerialize(bolt)), common,false));
             }catch(RuntimeException wrapperCause){
                 if (wrapperCause.getCause() != null && NotSerializableException.class.equals(wrapperCause.getCause().getClass())){
                     throw new IllegalStateException(
                         "Bolt '" + boltId + "' contains a non-serializable field of type " + wrapperCause.getCause().getMessage() + ", " +
                         "which was instantiated prior to topology creation. " + wrapperCause.getCause().getMessage() + " " +
                         "should be instantiated within the prepare method of '" + boltId + " at the earliest.", wrapperCause);
+                }
+                throw wrapperCause;
+            }
+        }
+        for(String accBoltId: _accGeneralBolts.keySet()) {
+            IRichBolt bolt = _accGeneralBolts.get(accBoltId);
+            IAccBolt acc_bolt = _accBolts.get(accBoltId);
+            bolt = maybeAddCheckpointTupleForwarder(bolt);
+            ComponentCommon common = getComponentCommon(accBoltId, bolt);
+            try{
+                maybeAddCheckpointInputs(common);
+                boltSpecs.put(accBoltId, new Bolt(ComponentObject.serialized_java(Utils.javaSerialize(bolt)), common,true));
+                accBoltSpecs.put(accBoltId,new Bolt(ComponentObject.serialized_java(Utils.javaSerialize(acc_bolt)),common,true));
+            }catch(RuntimeException wrapperCause){
+                if (wrapperCause.getCause() != null && NotSerializableException.class.equals(wrapperCause.getCause().getClass())){
+                    throw new IllegalStateException(
+                            "AccBolt '" + accBoltId + "' contains a non-serializable field of type " + wrapperCause.getCause().getMessage() + ", " +
+                                    "which was instantiated prior to topology creation. " + wrapperCause.getCause().getMessage() + " " +
+                                    "should be instantiated within the prepare method of '" + accBoltId + " at the earliest.", wrapperCause);
                 }
                 throw wrapperCause;
             }
@@ -146,13 +173,19 @@ public class TopologyBuilder {
                 throw wrapperCause;
             }
         }
-
+        // 为stormTopology添加是否可以加速的属性
         StormTopology stormTopology = new StormTopology(spoutSpecs,
                 boltSpecs,
                 new HashMap<String, StateSpoutSpec>());
 
         stormTopology.set_worker_hooks(_workerHooks);
-
+        stormTopology.set_acc_bolts(accBoltSpecs);
+        if(!_accGeneralBolts.isEmpty() && _kernelFileStr != null){
+            stormTopology.set_kernel_file_str(_kernelFileStr);
+        }
+        if(!_accGeneralBolts.isEmpty() && _kernelFileStr == null){
+            throw new IllegalStateException("KernelFile of the topology is not set!");
+        }
         return stormTopology;
     }
 
@@ -183,6 +216,70 @@ public class TopologyBuilder {
         _bolts.put(id, bolt);
         return new BoltGetter(id);
     }
+
+    /**
+     * Define a new bolt which can be accelerated in FPGA or GPU in this topology with the specified amount of parallelism
+     * @param id
+     * @param bolt
+     * @param parallelism_hint the number of tasks that should be assigned to execute this bolt while this component can not be accelerated
+     * @return use the returned object to declare the inputs to this component
+     * @throws IllegalArgumentException
+     */
+    public BoltDeclarer setAccBolt(String id,IRichBolt bolt,Number parallelism_hint) throws IllegalArgumentException{
+        validateUnusedId(id);
+        initCommon(id,bolt,parallelism_hint);
+        _accGeneralBolts.put(id,bolt);
+        return new BoltGetter(id);
+    }
+    /**
+     * Define a new bolt which can be accelerated in FPGA or GPU in this topology with the specified amount of parallelism
+     * @param id
+     * @param bolt
+     * @param parallelism_hint the number of tasks that should be assigned to execute this bolt while this component can not be accelerated
+     * @return use the returned object to declare the inputs to this component
+     * @throws IllegalArgumentException
+     */
+    public BoltDeclarer setAccBolt(String id, BaseAccBolt bolt, Number parallelism_hint) throws IllegalArgumentException {
+        _accBolts.put(id,bolt);
+        return setAccBolt(id,new AccBoltExecutor(bolt),parallelism_hint);
+    }
+
+    public BoltDeclarer setAccBolt(String id, BaseAccBolt bolt) throws IllegalArgumentException {
+        _accBolts.put(id,bolt);
+        return setAccBolt(id,new AccBoltExecutor(bolt),1);
+    }
+
+    /**
+     * Set the kernel file as a String
+     * @param file a kernel string or kernel file path
+     * @param type "FileString" or "FilePath"
+     */
+    public void setTopologyKernelFile(String file,KernelFileArgumentType type)throws IOException{
+        switch(type){
+            case FILESTRING:_kernelFileStr = file;
+            case FILEPATH:
+                try{
+                    FileReader reader = new FileReader(file);
+                    char[] str = new char[2048];
+                    int temp;
+                    int len = 0;
+                    while((temp = reader.read()) != -1){
+                        str[len] = (char)temp;
+                        len++;
+                    }
+                    _kernelFileStr = new String(str,0,len);
+                    reader.close();
+                }catch(FileNotFoundException e){
+                    throw new IllegalArgumentException("Kernel File "+ file+ " did not exists",e);
+                }catch(IOException e) {
+                    throw new IOException("IOException while reading the kernel file:");
+                }
+           default:
+               throw new IllegalArgumentException("Kernel file type is illegal");
+        }
+    }
+
+
 
     /**
      * Define a new bolt in this topology. This defines a basic bolt, which is a
@@ -369,6 +466,9 @@ public class TopologyBuilder {
     private void validateUnusedId(String id) {
         if(_bolts.containsKey(id)) {
             throw new IllegalArgumentException("Bolt has already been declared for id " + id);
+        }
+        if(_accGeneralBolts.containsKey(id)){
+            throw new IllegalArgumentException("AccBolt has already been declared for id " + id);
         }
         if(_spouts.containsKey(id)) {
             throw new IllegalArgumentException("Spout has already been declared for id " + id);

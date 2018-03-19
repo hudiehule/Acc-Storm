@@ -60,7 +60,7 @@ public class ReadClusterState implements Runnable, AutoCloseable {
     private final String assignmentId;
     private final ISupervisor iSuper;
     private final ILocalizer localizer;
-    private final ContainerLauncher launcher;
+    private final ContainerLauncher launcher; // 用于启动Container  Container Represents a container that a worker will run in.
     private final String host;
     private final LocalState localState;
     private final IStormClusterState clusterState;
@@ -126,7 +126,7 @@ public class ReadClusterState implements Runnable, AutoCloseable {
             List<String> stormIds = stormClusterState.assignments(syncCallback);
             Map<String, VersionedData<Assignment>> assignmentsSnapshot =
                     getAssignmentsSnapshot(stormClusterState, stormIds, assignmentVersions.get(), syncCallback);
-            
+            // 获取当前supervisor的所有assignments 以map<portId,LocalAssignment>形式返回
             Map<Integer, LocalAssignment> allAssignments =
                     readAssignments(assignmentsSnapshot);
             if (allAssignments == null) {
@@ -135,7 +135,7 @@ public class ReadClusterState implements Runnable, AutoCloseable {
             }
             Map<String, List<ProfileRequest>> topoIdToProfilerActions = getProfileActions(stormClusterState, stormIds);
             
-            HashSet<Integer> assignedPorts = new HashSet<>();
+            HashSet<Integer> assignedPorts = new HashSet<>(); //存放分配了任务的portId
             LOG.debug("Synchronizing supervisor");
             LOG.debug("All assignment: {}", allAssignments);
             LOG.debug("Topology Ids -> Profiler Actions {}", topoIdToProfilerActions);
@@ -264,9 +264,9 @@ public class ReadClusterState implements Runnable, AutoCloseable {
                 }
             }
         }
-        Map<List<Long>, NodeInfo> executorNodePort = assignment.get_executor_node_port();
+        Map<ExecutorInfo, NodeInfo> executorNodePort = assignment.get_executor_node_port();
         if (executorNodePort != null) {
-            for (Map.Entry<List<Long>, NodeInfo> entry : executorNodePort.entrySet()) {
+            for (Map.Entry<ExecutorInfo, NodeInfo> entry : executorNodePort.entrySet()) {
                 if (entry.getValue().get_node().equals(assignmentId)) {
                     for (Long port : entry.getValue().get_port()) {
                         LocalAssignment localAssignment = portTasks.get(port.intValue());
@@ -279,7 +279,7 @@ public class ReadClusterState implements Runnable, AutoCloseable {
                             portTasks.put(port.intValue(), localAssignment);
                         }
                         List<ExecutorInfo> executorInfoList = localAssignment.get_executors();
-                        executorInfoList.add(new ExecutorInfo(entry.getKey().get(0).intValue(), entry.getKey().get(entry.getKey().size() - 1).intValue()));
+                        executorInfoList.add(entry.getKey());
                     }
                 }
             }

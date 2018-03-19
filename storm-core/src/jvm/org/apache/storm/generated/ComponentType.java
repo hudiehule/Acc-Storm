@@ -30,7 +30,8 @@ import org.apache.thrift.TEnum;
 
 public enum ComponentType implements org.apache.thrift.TEnum {
   BOLT(1),
-  SPOUT(2);
+  SPOUT(2),
+  ACCBOLT(3);
 
   private final int value;
 
@@ -49,12 +50,14 @@ public enum ComponentType implements org.apache.thrift.TEnum {
    * Find a the enum type by its integer value, as defined in the Thrift IDL.
    * @return null if the value is not found.
    */
-  public static ComponentType findByValue(int value) { 
+  public static ComponentType findByValue(int value) {
     switch (value) {
       case 1:
         return BOLT;
       case 2:
         return SPOUT;
+      case 3:
+        return ACCBOLT;
       default:
         return null;
     }

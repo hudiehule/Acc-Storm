@@ -16,7 +16,7 @@
 (ns org.apache.storm.daemon.common
   (:use [org.apache.storm log config util])
   (:import [org.apache.storm.generated StormTopology
-            InvalidTopologyException GlobalStreamId]
+                                       InvalidTopologyException GlobalStreamId StormTopology$_Fields]
            [org.apache.storm.utils ThriftTopologyUtils])
   (:import [org.apache.storm.utils Utils])
   (:import [org.apache.storm.daemon.metrics.reporters PreparableReporter]
@@ -64,11 +64,12 @@
 ;; the task id is the virtual port
 ;; node->host is here so that tasks know who to talk to just from assignment
 ;; this avoid situation where node goes down and task doesn't know what to do information-wise
+(defrecord Executor [start-task-id last-task-id is-acc-executor is-assigned-acc-executor])
 (defrecord Assignment [master-code-dir node->host executor->node+port executor->start-time-secs worker->resources])
 
 
 ;; component->executors is a map from spout/bolt id to number of executors for that component
-(defrecord StormBase [storm-name launch-time-secs status num-workers component->executors owner topology-action-options prev-status component->debug])
+(defrecord StormBase [storm-name launch-time-secs status num-workers component->executors acc-component->executors owner topology-action-options prev-status component->debug])
 
 (defrecord SupervisorInfo [time-secs hostname assignment-id used-ports meta scheduler-meta uptime-secs version resources-map
                             ocl-fpga-device-num ocl-gpu-device-num ocl-used-fpga-device-num ocl-used-gpu-device-num])
@@ -120,14 +121,14 @@
         )))))
 
 (defn- validate-ids! [^StormTopology topology]
-  (let [sets (map #(.getFieldValue topology %) thrift/STORM-TOPOLOGY-FIELDS)
+  (let [sets (map #(.getFieldValue topology %) thrift/STORM-TOPOLOGY-FIELDS-EXECLUDE-ACCBOLT)
         offending (apply any-intersection sets)]
     (if-not (empty? offending)
       (throw (InvalidTopologyException.
               (str "Duplicate component ids: " offending))))
     (doseq [f thrift/STORM-TOPOLOGY-FIELDS
             :let [obj-map (.getFieldValue topology f)]]
-      (if-not (ThriftTopologyUtils/isWorkerHook f)
+      (if-not (or (ThriftTopologyUtils/isWorkerHook f) (ThriftTopologyUtils/isKernelFileStr f) (ThriftTopologyUtils/isAccBolts f))
         (do
           (doseq [id (keys obj-map)]
             (if (Utils/isSystemId id)
@@ -142,8 +143,18 @@
 (defn all-components [^StormTopology topology]
   (apply merge {}
     (for [f thrift/STORM-TOPOLOGY-FIELDS]
-      (if-not (ThriftTopologyUtils/isWorkerHook f)
+      (if-not (or (ThriftTopologyUtils/isKernelFileStr f) (ThriftTopologyUtils/isWorkerHook f) (ThriftTopologyUtils/isAccBolts f))
         (.getFieldValue topology f)))))
+
+;;获取topology的所有的accbolts的generalbolt的形式
+(defn acc-components [^StormTopology topology]
+  (let [bolt-components (.getFieldValue topology thrift/BOLT-FIELDS)]
+    (filter-val #(.is_is_AccBolt %) bolt-components)))
+
+(defn general-components [^StormTopology topology]
+  (let [all-components (all-components topology)
+         acc-components (acc-components topology)]
+         (filter-key #(not (contains? acc-components %)) all-components)))
 
 (defn component-conf [component]
   (->> component
@@ -376,14 +387,14 @@
   [^StormTopology user-topology storm-conf]
   (->> (system-topology! storm-conf user-topology)
        all-components
-       (map-val (comp #(get % TOPOLOGY-TASKS) component-conf))
-       (sort-by first)
-       (mapcat (fn [[c num-tasks]] (repeat num-tasks c)))
-       (map (fn [id comp] [id comp]) (iterate (comp int inc) (int 1)))
-       (into {})
+       (map-val (comp #(get % TOPOLOGY-TASKS) component-conf)) ;;从每个组件的conf中获取task的个数，得到<componentId,taskNum>的map
+       (sort-by first)                                      ;;以componentId排序
+       (mapcat (fn [[c num-tasks]] (repeat num-tasks c)))   ;;对于每一个entry<componentId,taskNum>，得到一个componentId重复taskNum次的序列，并且将所有component形成的序列连接起来
+       (map (fn [id comp] [id comp]) (iterate (comp int inc) (int 1))) ;;id是taskId 它是从1开始 按顺序递增的 comp代表componentId,这里由递增的taskid序列和上面形成的componentId序列一起形成<taskID,componentID>的map
+       (into {})                                            ;;将上面得到的放入一个map中返回
        ))
 
-(defn executor-id->tasks [[first-task-id last-task-id]]
+(defn executor-id->tasks [[start-task-id last-task-id is-acc-executor is-assigned-acc-executor]]
   (->> (range first-task-id (inc last-task-id))
        (map int)))
 

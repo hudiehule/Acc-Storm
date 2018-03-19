@@ -527,6 +527,23 @@ public class StormClusterStateImpl implements IStormClusterState {
                 newElems.set_component_executors(newComponentExecutors);
         }
 
+        if (stormBase.get_acc_component_executors() != null) {
+
+            Map<String, Integer> newAccComponentExecutors = new HashMap<>();
+            Map<String, Integer> accComponentExecutors = newElems.get_acc_component_executors();
+            // componentExecutors maybe be APersistentMap, which don't support "put"
+            for (Map.Entry<String, Integer> entry : accComponentExecutors.entrySet()) {
+                newAccComponentExecutors.put(entry.getKey(), entry.getValue());
+            }
+            for (Map.Entry<String, Integer> entry : stormBase.get_component_executors().entrySet()) {
+                if (!accComponentExecutors.containsKey(entry.getKey())) {
+                    newAccComponentExecutors.put(entry.getKey(), entry.getValue());
+                }
+            }
+            if (newAccComponentExecutors.size() > 0)
+                newElems.set_component_executors(newAccComponentExecutors);
+        }
+
         Map<String, DebugOptions> ComponentDebug = new HashMap<>();
         Map<String, DebugOptions> oldComponentDebug = stormBase.get_component_debug();
 

@@ -17,11 +17,8 @@
  */
 package org.apache.storm.scheduler;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.security.cert.CollectionCertStoreParameters;
+import java.util.*;
 
 import org.apache.storm.Config;
 import org.apache.storm.generated.Bolt;
@@ -52,6 +49,7 @@ public class TopologyDetails {
     private Integer topologyPriority;
     //when topology was launched
     private int launchTime;
+    private boolean isAccTopology;
 
     private static final Logger LOG = LoggerFactory.getLogger(TopologyDetails.class);
 
@@ -78,6 +76,7 @@ public class TopologyDetails {
             this.initResourceList();
         }
         this.initConfigs();
+        this.setInitExecutorsType(); // add
         this.launchTime = launchTime;
     }
 
@@ -175,6 +174,55 @@ public class TopologyDetails {
             }
         }
         return execs;
+    }
+
+    /**
+     *
+     */
+    private void setInitExecutorsType(){
+        StormTopology topo = this.topology;
+        Map<String,Bolt> allBolts = topo.get_bolts();
+        Set<String> accBoltsIds = new HashSet();
+
+        for(Map.Entry<String,Bolt> boltEntry : allBolts.entrySet()){
+            if(boltEntry.getValue().is_isAccBolt()) {
+                accBoltsIds.add(boltEntry.getKey());
+            }
+        }
+        for(Map.Entry<ExecutorDetails, String>  executorDetailsStringEntry : this.executorToComponent.entrySet()){
+            if(accBoltsIds.contains(executorDetailsStringEntry.getValue())){
+                executorDetailsStringEntry.getKey().setAccExecutor(true);
+                this.isAccTopology = true;
+            }
+        }
+    }
+
+    /**
+     * set a collection of ExecutorDetails's isAssignedAccExecutor as true
+     * @param coll a collection of ExecutorDetails whose isAssignedAccExecutor should be set to be true
+     */
+    public void setAccExecutorType(Collection<ExecutorDetails> coll){
+          for(Map.Entry<ExecutorDetails,String> entry:this.executorToComponent.entrySet()){
+              if(coll.contains(entry.getKey()))
+                  entry.getKey().setAssignedExecutor(true);
+          }
+    }
+
+    /**
+     * Returns all the accBolts's executors as a Collection
+     * @return
+     */
+    public Collection<ExecutorDetails> getAccBoltExecutors(){
+        StormTopology topo = this.topology;
+        List<ExecutorDetails> accBoltExecutors = new ArrayList<>();
+        Map<String,Bolt> allBolts = topo.get_bolts();
+
+        for(Map.Entry<String,Bolt> boltEntry : allBolts.entrySet()){
+            if(boltEntry.getValue().is_isAccBolt()) {
+                accBoltExecutors.addAll(componentToExecs(boltEntry.getKey()));
+            }
+        }
+        return accBoltExecutors;
     }
 
     /**
@@ -486,6 +534,13 @@ public class TopologyDetails {
         return this.launchTime;
     }
 
+    /**
+     * if the topology contains accComponents/accExecutors,return true ,else return false
+     * @return
+     */
+    public boolean isAccTopology(){
+        return this.isAccTopology;
+    }
     /**
      * Get how long this topology has been executing
      */

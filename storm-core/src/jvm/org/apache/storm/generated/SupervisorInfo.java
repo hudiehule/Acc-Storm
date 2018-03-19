@@ -1668,7 +1668,7 @@ public class SupervisorInfo implements org.apache.thrift.TBase<SupervisorInfo, S
       if (struct.is_set_ocl_used_gpu_device_num()) {
         optionals.set(10);
       }
-      oprot.writeBitSet(optionals, 9);
+      oprot.writeBitSet(optionals, 11);
       if (struct.is_set_assignment_id()) {
         oprot.writeString(struct.assignment_id);
       }
@@ -1737,7 +1737,7 @@ public class SupervisorInfo implements org.apache.thrift.TBase<SupervisorInfo, S
       struct.set_time_secs_isSet(true);
       struct.hostname = iprot.readString();
       struct.set_hostname_isSet(true);
-      BitSet incoming = iprot.readBitSet(7);
+      BitSet incoming = iprot.readBitSet(11);
       if (incoming.get(0)) {
         struct.assignment_id = iprot.readString();
         struct.set_assignment_id_isSet(true);

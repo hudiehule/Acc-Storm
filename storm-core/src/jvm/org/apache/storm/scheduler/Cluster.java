@@ -56,6 +56,7 @@ public class Cluster {
 
     /**
      * key topologyId, Value: requested and assigned resources (e.g., on-heap/off-heap mem, cpu) for each topology.
+     * The format of the Value:{requestedMemOnHeap, requestedMemOffHeap, requestedCpu, assignedMemOnHeap, assignedMemOffHeap, assignedCpu, assignedFpgaDevices, assignedGpuDevices}
      */
     private Map<String, Double[]> topologyResources;
 
@@ -132,7 +133,16 @@ public class Cluster {
     public String getHost(String supervisorId) {
         return inimbus.getHostName(supervisors, supervisorId);
     }
-    
+/*
+    public List<TopologyDetails> accTopologies(Topologies topologies){
+        List<TopologyDetails> ret = new ArrayList<>();
+        for(TopologyDetails topology : topologies.getTopologies()){
+            if(topology.isAccTopology()){
+                ret.add(topology);
+            }
+        }
+        return ret;
+    }*/
     /**
      * @return all the topologies which needs scheduling.
      */
@@ -198,7 +208,31 @@ public class Cluster {
         return componentToExecutors;
     }
 
+    /**
+     * Get the number of the available FPGA devices of this supervisor
+     * @param supervisor
+     * @return
+     */
+    public int getAvailableFpgaDevices(SupervisorDetails supervisor){
+           return supervisor.getTotalFPGA()-this.getUsedFpgaDevices(supervisor);
+    }
 
+    /**
+     * Get the number of the used FPGA devices of this supervisor
+     * @param supervisor
+     * @return
+     */
+    public int getUsedFpgaDevices(SupervisorDetails supervisor){
+        Map<String, SchedulerAssignment> assignments = this.getAssignments();
+        int usedFpgaDevices = 0;
+        for(SchedulerAssignment assignment :assignments.values()){
+             for(Map.Entry<ExecutorDetails,WorkerSlot> entry :assignment.getExecutorToSlot().entrySet()){
+                 if(entry.getKey().isAccExecutor && entry.getValue().getNodeId().equals(supervisor.getId()))
+                     usedFpgaDevices++;
+             }
+        }
+        return usedFpgaDevices;
+    }
     /**
      * Get all the used ports of this supervisor.
      */
@@ -320,6 +354,33 @@ public class Cluster {
     }
 
     /**
+     * @return all the available FpgaDevices Number of each supervisor
+     */
+    public Map<String,Integer> getAvailableFpgaDevices(){
+        HashMap<String,Integer> devices = new HashMap<>();
+        for(SupervisorDetails supervisor : this.supervisors.values()){
+            devices.put(supervisor.getId(),this.getAvailableFpgaDevices(supervisor));
+        }
+        return devices;
+    }
+
+    /**
+     *
+     * @return a map of supervisor-id , slotsList ,slotsList is not empty
+     */
+    public Map<String,List<WorkerSlot>> getAvailableSlotsMap(){
+        HashMap<String,List<WorkerSlot>> slotsMap = new HashMap<>();
+        for(SupervisorDetails supervisor : this.supervisors.values()){
+            List<WorkerSlot> slotsList = this.getAvailableSlots(supervisor);
+            if(!slotsList.isEmpty()){
+                List<WorkerSlot> slots = new ArrayList<>();
+                slots.addAll(this.getAvailableSlots(supervisor));
+                slotsMap.put(supervisor.getId(),slots);
+            }
+        }
+        return slotsMap;
+    }
+    /**
      * @return all the available worker slots in the cluster.
      */
     public List<WorkerSlot> getAvailableSlots() {
@@ -328,6 +389,15 @@ public class Cluster {
             slots.addAll(this.getAvailableSlots(supervisor));
         }
 
+        return slots;
+    }
+
+    public List<WorkerSlot> getAvailableSlotsWithDevices(){
+        List<WorkerSlot> slots = new ArrayList<>();
+        for(SupervisorDetails supervisor :this.supervisors.values()){
+            if(this.getAvailableFpgaDevices(supervisor)!=0)
+                slots.addAll(this.getAvailableSlots(supervisor));
+        }
         return slots;
     }
     
@@ -421,37 +491,7 @@ public class Cluster {
         return ret;
     }
 
-    /**
-     * add by die hu,get the used fpga devices number of each supervisor
-     * @param sup
-     * @return
-     */
-    public HashMap<String,Integer> getUsedFpgaDevices(SupervisorDetails sup){
-        HashMap<String,Integer> ret = new HashMap<>();
-        int fCount = 0;
-        for(SchedulerAssignmentImpl s: assignments.values()){
-           //获取assignments中的accelerator的executor
-            Map<ExecutorDetails, WorkerSlot> executorToSlot = s.getExecutorToSlot();
 
-        }
-        return ret;
-    }
-
-    /**
-     * add by die hu, get the used gpu devices number of each supervisor
-     * @param sup
-     * @return
-     */
-    public HashMap<String,Integer> getUsedGpuDevices(SupervisorDetails sup){
-        HashMap<String,Integer> ret = new HashMap<>();
-        int gCount = 0;
-        for(SchedulerAssignmentImpl s: assignments.values()){
-            //获取assignments中的accelerator的executor
-            Map<ExecutorDetails, WorkerSlot> executorToSlot = s.getExecutorToSlot();
-
-        }
-        return ret;
-    }
 
     /**
      * Get all the supervisors on the specified <code>host</code>.
@@ -644,6 +684,7 @@ public class Cluster {
 
     /*
     * Update memory usage for each topology and each supervisor node after every round of scheduling
+    * need to update the assigned fgga and gpu numbers of each topology
     * */
     public void updateAssignedMemoryForTopologyAndSupervisor(Topologies topologies) {
         Map<String, Double> supervisorToAssignedMem = new HashMap<String, Double>();
@@ -678,8 +719,51 @@ public class Cluster {
                 Double[] supervisor_resources = supervisorsResources.get(nodeId);
                 supervisor_resources[2] = entry.getValue();
             } else {
-                Double[] supervisor_resources = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+                Double[] supervisor_resources = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
                 supervisor_resources[2] = entry.getValue();
+                this.supervisorsResources.put(nodeId, supervisor_resources);
+            }
+        }
+    }
+
+    public void updateAssignedDevicesForTopologyAndSupervisor(Topologies topologies) {
+        Map<String, Double> supervisorToAssignedFpgaDevices = new HashMap<String, Double>();
+
+        for (Map.Entry<String, SchedulerAssignment> entry : this.getAssignments().entrySet()) {
+            String topId = entry.getValue().getTopologyId();
+            Double assignedFpgaDevicesForTopology = 0.0;
+            for (Map.Entry<WorkerSlot,Collection<ExecutorDetails>> slotCollectionEntry : entry.getValue().getSlotToAccExecutors().entrySet()) {
+                String nodeId = slotCollectionEntry.getKey().getNodeId();
+                int accNum = slotCollectionEntry.getValue().size();
+                assignedFpgaDevicesForTopology += accNum;
+                if (supervisorToAssignedFpgaDevices.containsKey(nodeId)) {
+                    supervisorToAssignedFpgaDevices.put(nodeId, supervisorToAssignedFpgaDevices.get(nodeId) + accNum);
+                } else {
+                    supervisorToAssignedFpgaDevices.put(nodeId, (double)accNum);
+                }
+            }
+            if (this.getTopologyResourcesMap().containsKey(topId)) {
+                Double[] topo_resources = getTopologyResourcesMap().get(topId);
+                topo_resources[6] = assignedFpgaDevicesForTopology;
+                topo_resources[7] = 0.0;
+            } else {
+                Double[] topo_resources = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+                topo_resources[6] = assignedFpgaDevicesForTopology;
+                topo_resources[7] = 0.0;
+                this.setTopologyResources(topId, topo_resources);
+            }
+        }
+
+        for (Map.Entry<String, Double> entry : supervisorToAssignedFpgaDevices.entrySet()) {
+            String nodeId = entry.getKey();
+            if (this.supervisorsResources.containsKey(nodeId)) {
+                Double[] supervisor_resources = supervisorsResources.get(nodeId);
+                supervisor_resources[5] = entry.getValue();
+                supervisor_resources[7] = 0.0;
+            } else {
+                Double[] supervisor_resources = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+                supervisor_resources[5] = entry.getValue();
+                supervisor_resources[7] = 0.0;
                 this.supervisorsResources.put(nodeId, supervisor_resources);
             }
         }
@@ -731,7 +815,7 @@ public class Cluster {
      * Get the amount of resources used by topologies.  Used for displaying resource information on the UI
      * @return  a map that contains multiple topologies and the resources the topology requested and assigned.
      * Key: topology id Value: an array that describes the resources the topology requested and assigned in the following format:
-     *  {requestedMemOnHeap, requestedMemOffHeap, requestedCpu, assignedMemOnHeap, assignedMemOffHeap, assignedCpu}
+     *  {requestedMemOnHeap, requestedMemOffHeap, requestedCpu, assignedMemOnHeap, assignedMemOffHeap, assignedCpu,assignedFpgaDevices, assignedGpuDevices}
      */
     public Map<String, Double[]> getTopologyResourcesMap() {
         return this.topologyResources;
@@ -740,7 +824,7 @@ public class Cluster {
     /**
      * Sets the amount of used and free resources on a supervisor. Used for displaying resource information on the UI
      * @param supervisorResources a map where the key is the supervisor id and the value is a map that represents
-     * resource usage for a supervisor in the following format: {totalMem, totalCpu, usedMem, usedCpu}
+     * resource usage for a supervisor in the following format: {totalMem, totalCpu, usedMem, usedCpu,totalFpgaDevices,usedFpgaDevices,totalGpuDevices,usedGpuDevices}
      */
     public void setSupervisorsResourcesMap(Map<String, Double[]> supervisorResources) {
         this.supervisorsResources.putAll(supervisorResources);

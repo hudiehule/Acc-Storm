@@ -16,13 +16,13 @@
 
 (ns org.apache.storm.stats
   (:import [org.apache.storm.generated Nimbus Nimbus$Processor Nimbus$Iface StormTopology ShellComponent
-            NotAliveException AlreadyAliveException InvalidTopologyException GlobalStreamId
-            ClusterSummary TopologyInfo TopologySummary ExecutorInfo ExecutorSummary ExecutorStats
-            ExecutorSpecificStats SpoutStats BoltStats ErrorInfo
-            SupervisorSummary CommonAggregateStats ComponentAggregateStats
-            ComponentPageInfo ComponentType BoltAggregateStats
-            ExecutorAggregateStats SpecificAggregateStats
-            SpoutAggregateStats TopologyPageInfo TopologyStats])
+                                       NotAliveException AlreadyAliveException InvalidTopologyException GlobalStreamId
+                                       ClusterSummary TopologyInfo TopologySummary ExecutorInfo ExecutorSummary ExecutorStats
+                                       ExecutorSpecificStats SpoutStats BoltStats ErrorInfo
+                                       SupervisorSummary CommonAggregateStats ComponentAggregateStats
+                                       ComponentPageInfo ComponentType BoltAggregateStats
+                                       ExecutorAggregateStats SpecificAggregateStats
+                                       SpoutAggregateStats TopologyPageInfo TopologyStats Bolt])
   (:import [org.apache.storm.utils Utils])
   (:import [org.apache.storm.metric.internal MultiCountStatAndMetric MultiLatencyStatAndMetric])
   (:use [org.apache.storm log util])
@@ -820,7 +820,12 @@
         spouts (.get_spouts topology)]
     (cond
       (Utils/isSystemId id) :bolt
-      (.containsKey bolts id) :bolt
+      (.containsKey bolts id) (let [^Bolt bolt (get bolts id)
+                                       isAccBolt (.is_isAccBolt bolt)]
+                                (if isAccBolt
+                                  :accBolt
+                                  :bolt)
+                                )
       (.containsKey spouts id) :spout)))
 
 (defn extract-nodeinfos-from-hb-for-comp
@@ -1243,6 +1248,7 @@
                                          (or uptime 0)))
     (.set_stats ((condp = comp-type
                    :bolt thriftify-bolt-agg-stats
+                   :accBolt thriftify-bolt-agg-stats
                    :spout thriftify-spout-agg-stats) stats))))
 
 (defn- thriftify-bolt-input-stats
@@ -1283,6 +1289,13 @@
                    (map-val thriftify-bolt-agg-stats w->stats)
                    (thriftify-bolt-input-stats (:cid+sid->input-stats data))
                    (thriftify-bolt-output-stats (:sid->output-stats data))]
+            :accBolt [ComponentType/ACCBOLT
+                      (->
+                        (partial thriftify-exec-agg-stats comp-id :accBolt)
+                        (map (:executor-stats data)))
+                      (map-val thriftify-bolt-agg-stats w->stats)
+                      (thriftify-bolt-input-stats (:cid+sid->input-stats data))
+                      (thriftify-bolt-output-stats (:sid->output-stats data))]
             :spout [ComponentType/SPOUT
                     (->
                       (partial thriftify-exec-agg-stats comp-id :spout)

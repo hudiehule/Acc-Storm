@@ -27,7 +27,7 @@
             EmitInfo BoltFailInfo BoltAckInfo BoltExecuteInfo])
   (:import [org.apache.storm.grouping CustomStreamGrouping])
   (:import [org.apache.storm.task WorkerTopologyContext IBolt OutputCollector IOutputCollector])
-  (:import [org.apache.storm.generated GlobalStreamId])
+  (:import [org.apache.storm.generated GlobalStreamId Bolt])
   (:import [org.apache.storm.utils Utils TupleUtils MutableObject RotatingMap RotatingMap$ExpiredCallback MutableLong Time DisruptorQueue WorkerBackpressureThread])
   (:import [com.lmax.disruptor InsufficientCapacityException])
   (:import [org.apache.storm.serialization KryoTupleSerializer])
@@ -36,7 +36,9 @@
   (:import [org.apache.storm Config Constants])
   (:import [org.apache.storm.cluster ClusterStateContext DaemonType])
   (:import [org.apache.storm.grouping LoadAwareCustomStreamGrouping LoadAwareShuffleGrouping LoadMapping ShuffleGrouping])
-  (:import [java.util.concurrent ConcurrentLinkedQueue])
+  (:import [java.util.concurrent ConcurrentLinkedQueue]
+           (org.apache.storm.daemon.common Executor)
+           (org.apache.storm.topology IAccBolt))
   (:require [org.apache.storm [thrift :as thrift]
              [cluster :as cluster] [disruptor :as disruptor] [stats :as stats]])
   (:require [org.apache.storm.daemon [task :as task]])
@@ -145,7 +147,7 @@
          (into {})
          (HashMap.)))
 
-(defn executor-type [^WorkerTopologyContext context component-id]
+(defn executor-type [^WorkerTopologyContext context component-id ^Executor executor] ;;需要修改
   (let [topology (.getRawTopology context)
         spouts (.get_spouts topology)
         bolts (.get_bolts topology)]
@@ -221,12 +223,12 @@
         (when debug? (log-message "TRANSFERING tuple " val))
         (disruptor/publish batch-transfer->worker val)))))
 
-(defn mk-executor-data [worker executor-id]
+(defn mk-executor-data [worker ^Executor executor]
   (let [worker-context (worker-context worker)
-        task-ids (executor-id->tasks executor-id)
+        task-ids (executor-id->tasks executor)
         component-id (.getComponentId worker-context (first task-ids))
         storm-conf (normalized-component-conf (:storm-conf worker) worker-context component-id)
-        executor-type (executor-type worker-context component-id)
+        executor-type (executor-type worker-context component-id executor)
         batch-transfer->worker (disruptor/disruptor-queue
                                   (str "executor"  executor-id "-send-queue")
                                   (storm-conf TOPOLOGY-EXECUTOR-SEND-BUFFER-SIZE)
@@ -238,12 +240,12 @@
     (recursive-map
      :worker worker
      :worker-context worker-context
-     :executor-id executor-id
+     :executor-id [(:start-task-id executor) (:last-task-id executor)]
      :task-ids task-ids
      :component-id component-id
      :open-or-prepare-was-called? (atom false)
      :storm-conf storm-conf
-     :receive-queue ((:executor-receive-queue-map worker) executor-id)
+     :receive-queue ((:executor-receive-queue-map worker) executor)
      :storm-id (:storm-id worker)
      :conf (:conf worker)
      :shared-executor-data (HashMap.)
@@ -256,6 +258,7 @@
                                                           :acls (Utils/getWorkerACL storm-conf)
                                                           :context (ClusterStateContext. DaemonType/WORKER))
      :type executor-type
+     :is-acc-executor (:is-assigned-acc-executor executor)
      ;; TODO: should refactor this to be part of the executor specific map (spout or bolt with :common field)
      :stats (mk-executor-stats <> (sampling-rate storm-conf))
      :interval->task->metric-registry (HashMap.)
@@ -361,9 +364,12 @@
             (let [val [(AddressedTuple. AddressedTuple/BROADCAST_DEST (TupleImpl. context [tick-time-secs] Constants/SYSTEM_TASK_ID Constants/SYSTEM_TICK_STREAM_ID))]]
               (disruptor/publish receive-queue val))))))))
 
-(defn mk-executor [worker executor-id initial-credentials]
-  (let [executor-data (mk-executor-data worker executor-id)
-        _ (log-message "Loading executor " (:component-id executor-data) ":" (pr-str executor-id))
+(defn mk-executor [worker ^Executor executor-info initial-credentials]
+  (let [executor-data (mk-executor-data worker executor-info)
+        executor-id [(:start-task-id executor-info) (:last-task-id executor-info)]
+        _ (log-message "Loading " (if-let [is-assigned-acc (:is-assigned-acc-executor executor-info)]
+                                             "acc"
+                                             "general") "executor " (:component-id executor-data) ":" (pr-str executor-id))
         task-datas (->> executor-data
                         :task-ids
                         (map (fn [t] [t (task/mk-task executor-data t)]))
@@ -715,7 +721,7 @@
                                     (.setCredentials bolt-obj (.getValue tuple 0))))
                               Constants/METRICS_TICK_STREAM_ID (metrics-tick executor-data (get task-datas task-id) tuple)
                               (let [task-data (get task-datas task-id)
-                                    ^IBolt bolt-obj (:object task-data)
+                                    bolt-obj (:object task-data)
                                     user-context (:user-context task-data)
                                     sampler? (sampler)
                                     execute-sampler? (execute-sampler)
@@ -724,7 +730,10 @@
                                   (.setProcessSampleStartTime tuple now))
                                 (when execute-sampler?
                                   (.setExecuteSampleStartTime tuple now))
-                                (.execute bolt-obj tuple)
+                                (if-let [is-acc-task (:is-acc-executor task-data)] ;;判断task是不是一个acc-executor的task 如果是 则需要执行accExecute方法 否则执行execute方法
+                                     ((.accExecute ^IAccBolt bolt-obj tuple)
+                                       (log-message "accExecute method"))
+                                     (.execute ^IBolt bolt-obj tuple))
                                 (let [delta (tuple-execute-time-delta! tuple)]
                                   (when debug?
                                     (log-message "Execute done TUPLE " tuple " TASK: " task-id " DELTA: " delta))
@@ -848,6 +857,7 @@
       :kill-fn (:report-error-and-die executor-data)
       :factory? true
       :thread-name (str component-id "-executor" (:executor-id executor-data)))]))
+
 
 (defmethod close-component :spout [executor-data spout]
   (.close spout))

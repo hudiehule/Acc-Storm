@@ -104,6 +104,14 @@ public class SchedulerAssignmentImpl implements SchedulerAssignment {
         return this.executorToSlot.keySet();
     }
 
+    public Set<ExecutorDetails> getAccExecutors(){
+        Set<ExecutorDetails> allExecutors = this.executorToSlot.keySet();
+        Set<ExecutorDetails> assignedAccExecutors = new HashSet<>();
+        for(ExecutorDetails e : allExecutors){
+            if(e.isAssignedAccExecutor()) assignedAccExecutors.add(e);
+        }
+        return assignedAccExecutors;
+    }
     public Map<WorkerSlot, Collection<ExecutorDetails>> getSlotToExecutors() {
         Map<WorkerSlot, Collection<ExecutorDetails>> ret = new HashMap<WorkerSlot, Collection<ExecutorDetails>>();
         for (Map.Entry<ExecutorDetails, WorkerSlot> entry : executorToSlot.entrySet()) {
@@ -113,6 +121,21 @@ public class SchedulerAssignmentImpl implements SchedulerAssignment {
                 ret.put(ws, new LinkedList<ExecutorDetails>());
             }
             ret.get(ws).add(exec);
+        }
+        return ret;
+    }
+
+    public Map<WorkerSlot,Collection<ExecutorDetails>> getSlotToAccExecutors(){
+        Map<WorkerSlot, Collection<ExecutorDetails>> ret = new HashMap<WorkerSlot, Collection<ExecutorDetails>>();
+        for (Map.Entry<ExecutorDetails, WorkerSlot> entry : executorToSlot.entrySet()) {
+            ExecutorDetails exec = entry.getKey();
+            WorkerSlot ws = entry.getValue();
+            if (!ret.containsKey(ws)) {
+                ret.put(ws, new LinkedList<ExecutorDetails>());
+            }
+            if(exec.isAssignedAccExecutor()){
+                ret.get(ws).add(exec);
+            }
         }
         return ret;
     }

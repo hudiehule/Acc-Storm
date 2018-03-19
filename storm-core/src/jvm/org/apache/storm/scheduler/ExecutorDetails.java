@@ -21,9 +21,22 @@ public class ExecutorDetails {
     int startTask;
     int endTask;
 
+
+
+    boolean isAccExecutor;
+    boolean isAssignedAccExecutor;
+
     public ExecutorDetails(int startTask, int endTask){
         this.startTask = startTask;
         this.endTask = endTask;
+        this.isAccExecutor = false;
+        this.isAssignedAccExecutor = false;
+    }
+    public ExecutorDetails(int startTask,int endTask,boolean isAccExecutor,boolean isAssignedAccExecutor){
+        this.startTask = startTask;
+        this.endTask = endTask;
+        this.isAccExecutor = isAccExecutor;
+        this.isAssignedAccExecutor = isAssignedAccExecutor;
     }
 
     public int getStartTask() {
@@ -32,6 +45,20 @@ public class ExecutorDetails {
 
     public int getEndTask() {
         return endTask;
+    }
+
+    public boolean isAccExecutor() {
+        return isAccExecutor;
+    }
+
+    public boolean isAssignedAccExecutor(){return isAssignedAccExecutor;}
+
+    public void setAccExecutor(boolean accExecutor) {
+        isAccExecutor = accExecutor;
+    }
+
+    public void setAssignedExecutor(boolean assignedAccExecutor) {
+        isAssignedAccExecutor = assignedAccExecutor;
     }
 
     public boolean equals(Object other) {
@@ -49,6 +76,6 @@ public class ExecutorDetails {
     
     @Override
     public String toString() {
-    	return "[" + this.startTask + ", " + this.endTask + "]";
+    	return "[" + this.startTask + ", " + this.endTask + ", isAccExecutor: "+this.isAccExecutor +", isAssignedAccExecutor: "+this.isAssignedAccExecutor +"]";
     }
 }

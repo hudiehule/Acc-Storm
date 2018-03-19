@@ -31,10 +31,16 @@ public class ThriftTopologyUtils {
         return f.equals(StormTopology._Fields.WORKER_HOOKS);
     }
 
+    public static boolean isKernelFileStr(StormTopology._Fields f){
+        return f.equals(StormTopology._Fields.KERNEL_FILE_STR);
+    }
+    public  static boolean isAccBolts(StormTopology._Fields f){
+        return f.equals(StormTopology._Fields.BOLTS);
+    }
     public static Set<String> getComponentIds(StormTopology topology) {
         Set<String> ret = new HashSet<String>();
         for(StormTopology._Fields f: StormTopology.metaDataMap.keySet()) {
-            if(StormTopology.metaDataMap.get(f).valueMetaData.type == org.apache.thrift.protocol.TType.MAP) {
+            if(StormTopology.metaDataMap.get(f).valueMetaData.type == org.apache.thrift.protocol.TType.MAP && f!=StormTopology._Fields.ACC_BOLTS) {
                 Map<String, Object> componentMap = (Map<String, Object>) topology.getFieldValue(f);
                 ret.addAll(componentMap.keySet());
             }
@@ -44,7 +50,7 @@ public class ThriftTopologyUtils {
 
     public static ComponentCommon getComponentCommon(StormTopology topology, String componentId) {
         for(StormTopology._Fields f: StormTopology.metaDataMap.keySet()) {
-            if(StormTopology.metaDataMap.get(f).valueMetaData.type == org.apache.thrift.protocol.TType.MAP) {
+            if(StormTopology.metaDataMap.get(f).valueMetaData.type == org.apache.thrift.protocol.TType.MAP && f!=StormTopology._Fields.ACC_BOLTS) {
                 Map<String, Object> componentMap = (Map<String, Object>) topology.getFieldValue(f);
                 if(componentMap.containsKey(componentId)) {
                     Object component = componentMap.get(componentId);

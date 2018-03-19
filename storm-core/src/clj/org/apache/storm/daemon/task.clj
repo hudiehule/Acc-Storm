@@ -67,16 +67,18 @@
     (:topology worker))
    tid))
 
-(defn- get-task-object [^StormTopology topology component-id]
+(defn- get-task-object [^StormTopology topology component-id is-acc-executor]
   (let [spouts (.get_spouts topology)
         bolts (.get_bolts topology)
+        acc-bolts (.get_acc_bolts topology)
         state-spouts (.get_state_spouts topology)
         obj (Utils/getSetComponentObject
-             (cond
-              (contains? spouts component-id) (.get_spout_object ^SpoutSpec (get spouts component-id))
-              (contains? bolts component-id) (.get_bolt_object ^Bolt (get bolts component-id))
-              (contains? state-spouts component-id) (.get_state_spout_object ^StateSpoutSpec (get state-spouts component-id))
-              true (throw-runtime "Could not find " component-id " in " topology)))
+             (if is-acc-executor (.get_bolt_object ^Bolt (get acc-bolts component-id))
+                                 (cond
+                                   (contains? spouts component-id) (.get_spout_object ^SpoutSpec (get spouts component-id))
+                                   (contains? bolts component-id) (.get_bolt_object ^Bolt (get bolts component-id))
+                                   (contains? state-spouts component-id) (.get_state_spout_object ^StateSpoutSpec (get state-spouts component-id))
+                                   true (throw-runtime "Could not find " component-id " in " topology))))
         obj (if (instance? ShellComponent obj)
               (if (contains? spouts component-id)
                 (ShellSpout. obj)
@@ -174,7 +176,8 @@
     :user-context (user-topology-context (:worker executor-data) executor-data task-id)
     :builtin-metrics (builtin-metrics/make-data (:type executor-data) (:stats executor-data))
     :tasks-fn (mk-tasks-fn <>)
-    :object (get-task-object (.getRawTopology ^TopologyContext (:system-context <>)) (:component-id executor-data))))
+    :is-acc-task (:is-acc-executor executor-data)
+    :object (get-task-object (.getRawTopology ^TopologyContext (:system-context <>)) (:component-id executor-data) (:is-acc-task <>))))
 
 
 (defn mk-task [executor-data task-id]

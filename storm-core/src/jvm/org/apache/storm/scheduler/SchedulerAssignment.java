@@ -54,8 +54,12 @@ public interface SchedulerAssignment {
      * @return
      */
     public Set<ExecutorDetails> getExecutors();
+
+    public Set<ExecutorDetails> getAccExecutors();
     
     public Set<WorkerSlot> getSlots();
 
     public Map<WorkerSlot, Collection<ExecutorDetails>> getSlotToExecutors();
+
+    public Map<WorkerSlot, Collection<ExecutorDetails>> getSlotToAccExecutors();
 }

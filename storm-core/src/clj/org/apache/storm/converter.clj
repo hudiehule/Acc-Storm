@@ -15,8 +15,9 @@
 ;; limitations under the License.
 (ns org.apache.storm.converter
   (:import [org.apache.storm.generated SupervisorInfo NodeInfo Assignment WorkerResources
-            StormBase TopologyStatus ClusterWorkerHeartbeat ExecutorInfo ErrorInfo Credentials RebalanceOptions KillOptions
-            TopologyActionOptions DebugOptions ProfileRequest])
+                                       StormBase TopologyStatus ClusterWorkerHeartbeat ExecutorInfo ErrorInfo Credentials RebalanceOptions KillOptions
+                                       TopologyActionOptions DebugOptions ProfileRequest]
+           (org.apache.storm.daemon.common Executor))
   (:use [org.apache.storm util stats log])
   (:require [org.apache.storm.daemon [common :as common]]))
 
@@ -60,13 +61,20 @@
                             (.set_node_host (:node->host assignment))
                             (.set_executor_node_port (into {}
                                                            (map (fn [[k v]]
-                                                                  [(map long k)
-                                                                   (NodeInfo. (first v) (set (map long (rest v))))])
+                                                                  (let [executorInfo (ExecutorInfo. (int (:start-task-id k)) (int (:last-task-id k)))]
+                                                                    (doto executorInfo
+                                                                      (.set_isAccExecutor (boolean (:is-acc-executor k)) )
+                                                                      (.set_isAssignedAccExecutor (boolean (:is-assigned-acc-executor k)) ))
+                                                                    [executorInfo (NodeInfo. (first v) (set (map long (rest v))))]))
                                                                 (:executor->node+port assignment))))
                             (.set_executor_start_time_secs
                               (into {}
                                     (map (fn [[k v]]
-                                           [(map long k) (long v)])
+                                           (let [executorInfo (ExecutorInfo. (int (:start-task-id k)) (int (:last-task-id k)))]
+                                             (doto executorInfo
+                                               (.set_isAccExecutor (boolean (:is-acc-executor k)) )
+                                               (.set_isAssignedAccExecutor (boolean (:is-assigned-acc-executor k))))
+                                             [executorInfo (long v)]))
                                          (:executor->start-time-secs assignment)))))]
     (if (:worker->resources assignment)
       (.set_worker_resources thrift-assignment (into {} (map
@@ -79,14 +87,14 @@
                                                           (:worker->resources assignment)))))
     thrift-assignment))
 
-(defn clojurify-executor->node_port [executor->node_port]
+(defn clojurify-executor->node_port [executor->node_port]   ;;executor->node_port是一个map<ExecutorInfo, NodeInfo>
   (into {}
     (map-val
       (fn [nodeInfo]
         (concat [(.get_node nodeInfo)] (.get_port nodeInfo))) ;nodeInfo should be converted to [node,port1,port2..]
       (map-key
-        (fn [list-of-executors]
-          (into [] list-of-executors)) ; list of executors must be coverted to clojure vector to ensure it is sortable.
+        (fn [^ExecutorInfo executor]
+          (Executor. (.get_task_start executor) (.get_task_end executor) (.is_isAccExecutor executor) (.is_isAssignedAccExecutor executor))) ; list of executors must be coverted to clojure vector to ensure it is sortable.
         executor->node_port))))
 
 (defn clojurify-worker->resources [worker->resources]
@@ -104,7 +112,8 @@
       (.get_master_code_dir assignment)
       (into {} (.get_node_host assignment))
       (clojurify-executor->node_port (into {} (.get_executor_node_port assignment)))
-      (map-key (fn [executor] (into [] executor))
+      (map-key (fn [^ExecutorInfo executor]
+                 (Executor. (.get_task_start executor) (.get_task_end executor) (.is_isAccExecutor executor) (.is_isAssignedAccExecutor executor)))
         (into {} (.get_executor_start_time_secs assignment)))
       (clojurify-worker->resources (into {} (.get_worker_resources assignment))))))
 
@@ -193,6 +202,7 @@
     (.set_status (convert-to-status-from-symbol (:status storm-base)))
     (.set_num_workers (int (:num-workers storm-base)))
     (.set_component_executors (map-val int (:component->executors storm-base)))
+    (.set_acc_component_executors (map-val int (:acc-component->executors storm-base)))
     (.set_owner (:owner storm-base))
     (.set_topology_action_options (thriftify-topology-action-options storm-base))
     (.set_prev_status (convert-to-status-from-symbol (:prev-status storm-base)))
@@ -206,6 +216,7 @@
       (convert-to-symbol-from-status (.get_status storm-base))
       (.get_num_workers storm-base)
       (into {} (.get_component_executors storm-base))
+      (into {} (.get_acc_component_executors storm-base))
       (.get_owner storm-base)
       (clojurify-topology-action-options (.get_topology_action_options storm-base))
       (convert-to-symbol-from-status (.get_prev_status storm-base))
@@ -214,14 +225,19 @@
 (defn thriftify-stats [stats]
   (if stats
     (map-val thriftify-executor-stats
-      (map-key #(ExecutorInfo. (int (first %1)) (int (last %1)))
+      (map-key (fn [list-executor-info]
+                 (let [executorInfo (ExecutorInfo.(int (first %1)) (int (second %1)))]
+                   (doto executorInfo
+                     (.set_isAccExecutor (boolean (nth %1 2)))
+                     (.set_isAssignedAccExecutor (boolean (nth %1 3))))
+                   executorInfo))
         stats))
     {}))
 
 (defn clojurify-stats [stats]
   (if stats
     (map-val clojurify-executor-stats
-      (map-key (fn [x] (list (.get_task_start x) (.get_task_end x)))
+      (map-key (fn [x] (list (.get_task_start x) (.get_task_end x) (.is_isAccExecutor x) (.is_isAssignedAccExecutor)))
         stats))
     {}))
 

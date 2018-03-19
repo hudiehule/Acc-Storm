@@ -31,7 +31,7 @@ public class SupervisorDetails {
      * hostname of this supervisor
      */
     String host;
-    /** add by die hu
+    /**  info add by die hu
      * all the ports of this supervisor is a List<long>
      */
     Object meta;

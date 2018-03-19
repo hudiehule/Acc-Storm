@@ -53,7 +53,7 @@
                             [converter :as converter]
                             [stats :as stats]])
   (:require [clojure.set :as set])
-  (:import [org.apache.storm.daemon.common StormBase Assignment])
+  (:import [org.apache.storm.daemon.common StormBase Assignment Executor])
   (:use [org.apache.storm.daemon common])
   (:use [org.apache.storm config])
   (:import [org.apache.zookeeper data.ACL ZooDefs$Ids ZooDefs$Perms])
@@ -173,6 +173,7 @@
      :authorization-handler (mk-authorization-handler (conf NIMBUS-AUTHORIZER) conf)
      :impersonation-authorization-handler (mk-authorization-handler (conf NIMBUS-IMPERSONATION-AUTHORIZER) conf)
      :submitted-count (atom 0)
+     ;;storm-cluster-state是nimbus data 的重要成员之一 该对象可用于将数据存储到zookeeper以及从zookeeper获取数据 这些数据是与storm集群相关的元数据信息
      :storm-cluster-state (cluster/mk-storm-cluster-state conf :acls (when
                                                                        (Utils/isZkAuthenticationConfiguredStormServer
                                                                          conf)
@@ -459,7 +460,7 @@
 (defn get-key-seq-from-blob-store [blob-store]
   (let [key-iter (.listKeys blob-store)]
     (iterator-seq key-iter)))
-
+;;为该topology创建对应的本地文件夹，复制.jar文件，并写入序列化后的Storm配置项和Topology信息
 (defn- setup-storm-code [nimbus conf storm-id tmp-jar-location storm-conf topology]
   (let [subject (get-subject)
         storm-cluster-state (:storm-cluster-state nimbus)
@@ -548,7 +549,7 @@
         topology (read-storm-topology-as-nimbus storm-id blob-store)
         executor->component (->> (compute-executor->component nimbus storm-id)
                                  (map-key (fn [[start-task end-task]]
-                                            (ExecutorDetails. (int start-task) (int end-task)))))]
+                                             (ExecutorDetails. (int start-task) (int end-task)))))]   ;; Map<ExecutorDetails,ComponentID>
     (TopologyDetails. storm-id
                       topology-conf
                       topology
@@ -636,6 +637,7 @@
 (defn- to-executor-id [task-ids]
   [(first task-ids) (last task-ids)])
 
+;;根据当前topology设置的组件并行度创建对应的Executor 最后得到的是一组Executor集合[[startTaskId,endTaskID], [startTaskId,endTaskID],...]，每一个component都对应了一个这样的集合
 (defn- compute-executors [nimbus storm-id]
   (let [conf (:conf nimbus)
         blob-store (:blob-store nimbus)
@@ -654,14 +656,14 @@
            (mapcat second)
            (map to-executor-id)
            ))))
-
+;; return maps form executor -> component id
 (defn- compute-executor->component [nimbus storm-id]
   (let [conf (:conf nimbus)
         blob-store (:blob-store nimbus)
-        executors (compute-executors nimbus storm-id)
+        executors (compute-executors nimbus storm-id)       ;;计算拓扑的所有executors 返回的结果是[[startTaskId,endTaskId],[startTaskId,endTaskId],......]
         topology (read-storm-topology-as-nimbus storm-id blob-store)
         storm-conf (read-storm-conf-as-nimbus storm-id blob-store)
-        task->component (storm-task-info topology storm-conf)
+        task->component (storm-task-info topology storm-conf) ;;Returns map from task -> component id
         executor->component (into {} (for [executor executors
                                            :let [start-task (first executor)
                                                  component (task->component start-task)]]
@@ -689,7 +691,7 @@
                                         alive-executors (topology->alive-executors tid)
                                         dead-executors (set/difference all-executors alive-executors)
                                         dead-slots (->> (:executor->node+port assignment)
-                                                        (filter #(contains? dead-executors (first %)))
+                                                        (filter #(contains? dead-executors [(:start-task-id (first %)) (:last-task-id (first %))]))
                                                         vals)]]
                               dead-slots))
         supervisor->dead-ports (->> dead-slots
@@ -697,7 +699,7 @@
                                     (map (fn [[sid port]] {sid #{port}}))
                                     (apply (partial merge-with set/union)))]
     (or supervisor->dead-ports {})))
-
+;;将在zk上获得的assignments转换成可以被scheduler使用的SchedulerAssignment信息,在这里面过滤掉了死掉的executor
 (defn- compute-topology->scheduler-assignment [nimbus existing-assignments topology->alive-executors]
   "convert assignment information in zk to SchedulerAssignment, so it can be used by scheduler api."
   (into {} (for [[tid assignment] existing-assignments
@@ -708,12 +710,16 @@
                        node+port->slot (into {} (for [[[node port] [mem-on-heap mem-off-heap cpu]] worker->resources]
                                                   {[node port]
                                                    (WorkerSlot. node port mem-on-heap mem-off-heap cpu)}))
-                       executor->slot (into {} (for [[executor [node port]] executor->node+port]
+                       executor->slot (into {} (for [[^Executor executor [node port]] executor->node+port]
                                                  ;; filter out the dead executors
-                                                 (if (contains? alive-executors executor)
-                                                   {(ExecutorDetails. (first executor)
-                                                                      (second executor))
-                                                    (get node+port->slot [node port])}
+                                                 (if (contains? alive-executors [(:start-task-id executor) (:last-task-id executor)])
+                                                   (let [executorDetail (ExecutorDetails. (int (:start-task-id executor))
+                                                                                          (int (:last-task-id executor)))]
+                                                     (doto executorDetail
+                                                       (.setAccExecutor (:is-acc-executor executor))
+                                                       (.setAssignedExecutor (:is-assigned-acc-executor executor)))
+                                                     {executorDetail
+                                                      (get node+port->slot [node port])})
                                                    {})))]]
              {tid (SchedulerAssignmentImpl. tid executor->slot)})))
 
@@ -721,8 +727,8 @@
 (defn- read-all-supervisor-details [nimbus all-scheduling-slots supervisor->dead-ports]
   "return a map: {supervisor-id SupervisorDetails}"
   (let [storm-cluster-state (:storm-cluster-state nimbus)
-        supervisor-infos (all-supervisor-info storm-cluster-state)
-        nonexistent-supervisor-slots (apply dissoc all-scheduling-slots (keys supervisor-infos)) ;;计算supervisor已经不存在slots,可能是由于supervisor除了故障死掉
+        supervisor-infos (all-supervisor-info storm-cluster-state) ;;从zookeeper上获取所有的supervisor信息
+        nonexistent-supervisor-slots (apply dissoc all-scheduling-slots (keys supervisor-infos)) ;;获取supervisor已经不存在的<supervisor-id,ports>键值对，形成map,可能是由于supervisor出了故障死掉
         all-supervisor-details (into {} (for [[sid supervisor-info] supervisor-infos
                                               :let [hostname (:hostname supervisor-info)
                                                     scheduler-meta (:scheduler-meta supervisor-info)
@@ -730,7 +736,7 @@
                                                     ;; hide the dead-ports from the all-ports
                                                     ;; these dead-ports can be reused in next round of assignments
                                                     all-ports (-> (get all-scheduling-slots sid)
-                                                                  (set/difference dead-ports)
+                                                                  (set/difference dead-ports) ;;去掉all-ports中的dead-ports
                                                                   ((fn [ports] (map int ports))))
                                                     supervisor-details (SupervisorDetails. sid hostname scheduler-meta all-ports (:resources-map supervisor-info)
                                                                                            (:ocl-fpga-device-num supervisor-info) (:ocl-gpu-device-num supervisor-info))]]
@@ -743,12 +749,12 @@
 
 (defn- compute-topology->executor->node+port [scheduler-assignments]
   "convert {topology-id -> SchedulerAssignment} to
-           {topology-id -> {executor [node port]}}"
+           {topology-id -> {Executor [node port]}}"
   (map-val (fn [^SchedulerAssignment assignment]
              (->> assignment
                   .getExecutorToSlot
                   (#(into {} (for [[^ExecutorDetails executor ^WorkerSlot slot] %]
-                              {[(.getStartTask executor) (.getEndTask executor)]
+                              {(Executor. (.getStartTask executor) (.getEndTask executor) (.isAccExecutor executor) (.isAssignedAccExecutor executor))
                                [(.getNodeId slot) (.getPort slot)]})))))
            scheduler-assignments))
 
@@ -800,7 +806,7 @@
             :let [old-executor->node+port (-> topology-id
                                               existing-assignments
                                               :executor->node+port)
-                  reassignment (filter (fn [[executor node+port]]
+                  reassignment (filter (fn [[^Executor executor node+port]]
                                          (and (contains? old-executor->node+port executor)
                                               (not (= node+port (old-executor->node+port executor)))))
                                        executor->node+port)]]
@@ -808,22 +814,23 @@
         (let [new-slots-cnt (count (set (vals executor->node+port)))
               reassign-executors (keys reassignment)]
           (log-message "Reassigning " topology-id " to " new-slots-cnt " slots")
-          (log-message "Reassign executors: " (vec reassign-executors)))))
+          ;;(log-message "Reassign executors: " (vec reassign-executors))
+          )))
 
     new-topology->executor->node+port))
 
 ;; public so it can be mocked out 为所有Topologies计算新的调度
-;; existing-assignments是已经分配的任务集合 是一个<topology-id,Assignments>集合
+;; existing-assignments是已经分配的任务集合 是一个<topology-id,Assignment>集合 此处的Assignment是commom.clj里面定义的Assignment
 ;; topologies表示Topologies对象
 ;; scratch-topology-id 表示需要重新分配操作的topology-id
 (defn compute-new-scheduler-assignments [nimbus existing-assignments topologies scratch-topology-id]
   (let [conf (:conf nimbus)
         storm-cluster-state (:storm-cluster-state nimbus)
-        ;; compute-topology->executors 获取<topology-id,executors>集合，方法的实现实际上是对每一个topology-id调用compute-ecexutors方法获取到的
+        ;; compute-topology->executors 获取已经分配过的topology 的<topology-id,executors>集合，方法的实现实际上是对每一个topology-id调用compute-ecexutors方法获取到的
         topology->executors (compute-topology->executors nimbus (keys existing-assignments))
-        ;; update the executors heartbeats first.更新所有topologies的Executor的心跳信息
+        ;; update the executors heartbeats first.更新所有已经分配资源的topologies的Executor的心跳信息
         _ (update-all-heartbeats! nimbus existing-assignments topology->executors)
-        ;; 获取<topology-id,alive-executors>集合
+        ;; 获取已经分配资源的topologies的<topology-id,alive-executors>集合
         topology->alive-executors (compute-topology->alive-executors nimbus
                                                                      existing-assignments
                                                                      topologies
@@ -834,11 +841,11 @@
                                                                existing-assignments
                                                                topology->executors
                                                                topology->alive-executors)
-        ;; 获取<topology-id, SchedulerAssignmentImpl> 转换ZooKeeper中的assignment为SchedulerAssignment
+        ;; 转换ZooKeeper中的assignment为SchedulerAssignment,转换为<topology-id, SchedulerAssignmentImpl>供调度器使用
         topology->scheduler-assignment (compute-topology->scheduler-assignment nimbus
                                                                                existing-assignments
                                                                                topology->alive-executors)
-        ;; 计算missing-assignment-topologies 找出需要从新assign的Topology
+        ;; 计算missing-assignment-topologies 找出需要重新assign的Topology
         missing-assignment-topologies (->> topologies
                                            .getTopologies
                                            (map (memfn getId))
@@ -851,13 +858,13 @@
                                                                   (get t)
                                                                   num-used-workers )
                                                               (-> topologies (.getById t) .getNumWorkers)))))))
-        ;; 通过调用all-scheduling-slots得到所有Supervisor节点中可用的slot数量 得到的是所有的slots
+        ;; 通过调用all-scheduling-slots得到所有Supervisor节点中可用的slot数量 得到的是所有的slots 是<supervisor-id,ports>的map,ports是一个set集合
         all-scheduling-slots (->> (all-scheduling-slots nimbus topologies missing-assignment-topologies)
                                   (map (fn [[node-id port]] {node-id #{port}}))
                                   (apply merge-with set/union))
         ;; 调用read-all-supervisor-details得到所有的Supervisor节点SupervisorDetails
         supervisors (read-all-supervisor-details nimbus all-scheduling-slots supervisor->dead-ports)
-        ;; 创建Cluster对象
+        ;; 创建Cluster对象 这是Scheduler用来进行调度的动态信息 每次分配任务时都会重新生成一个Cluster对象 保存着集群和拓扑的动态信息
         cluster (Cluster. (:inimbus nimbus) supervisors topology->scheduler-assignment conf)
         _ (.setStatusMap cluster (deref (:id->sched-status nimbus)))
         ;; call scheduler.schedule to schedule all the topologies 分配所有的topologies
@@ -865,7 +872,8 @@
         ;;schedule方法有两个参数：topologies和cluster ;topologies包含所有Topology的静态信息 cluster中包含了Topology的运行态信息 根据这两者就可以进行真正的调度分配
         _ (.schedule (:scheduler nimbus) topologies cluster)
         _ (.setTopologyResourcesMap cluster @(:id->resources nimbus))
-        _ (if-not (conf SCHEDULER-DISPLAY-RESOURCE) (.updateAssignedMemoryForTopologyAndSupervisor cluster topologies))
+        _ (if-not (conf SCHEDULER-DISPLAY-RESOURCE) ((.updateAssignedMemoryForTopologyAndSupervisor cluster topologies)
+                                                      (.updateAssignedDevicesForTopologyAndSupervisor cluster topologies)) )
         ;;merge with existing statuses
         _ (reset! (:id->sched-status nimbus) (merge (deref (:id->sched-status nimbus)) (.getStatusMap cluster)))
         _ (reset! (:node-id->resources nimbus) (.getSupervisorsResourcesMap cluster))
@@ -912,7 +920,7 @@
     (let [conf (:conf nimbus) ;;分别从nimbus-data中获取conf,storm-cluster-state和inimbus对象,并将其保存为临时变量
         storm-cluster-state (:storm-cluster-state nimbus)
         ^INimbus inimbus (:inimbus nimbus)
-        ;; read all the topologies ;;从zk中读取所有活跃的Topologies,获取他们id的集合
+        ;; read all the topologies ;;从zk中读取所有活跃的Topologies,获取他们id的集合,是从/storm/storms/文件夹下找的，该文件夹存放的是StormBase，是topology的静态信息
         topology-ids (.active-storms storm-cluster-state)
           ;;根据前面得到的Topology-id的集合,对每一个id调用read-topology-details方法
           ;;从参数nimbus-data中获取topology-details信息,并以<topology-id,topology-details>保存在集合中
@@ -930,17 +938,19 @@
                                         ;; 我们忽略其之前的分配，故之前分配占用的所有slot将被视为空闲slot(空闲资源),可重新被调度使用。
                                         (when (or (nil? scratch-topology-id) (not= tid scratch-topology-id))
                                           {tid (.assignment-info storm-cluster-state tid nil)})))
-        ;; make the new assignments for topologies 调用compute-new-scheduler-assignments方法为所有Topologies计算新的调度
+        ;; make the new assignments for topologies 调用compute-new-scheduler-assignments方法为所有Topologies计算新的调度返回的是Map<Topology-id, SchedulerAssignment>
         new-scheduler-assignments (compute-new-scheduler-assignments
                                        nimbus
                                        existing-assignments
                                        topologies
                                        scratch-topology-id)
+        ;;结合existing-assignments convert {topology-id -> SchedulerAssignment} to {topology-id -> {Executor [node port]}
         topology->executor->node+port (compute-new-topology->executor->node+port new-scheduler-assignments existing-assignments)
-
+          ;;将已经分配过的topology以<topologyId,nil>的形式添加到topology->Executor->node+port中来
         topology->executor->node+port (merge (into {} (for [id assigned-topology-ids] {id nil})) topology->executor->node+port)
+          ;;convert {topology-id -> SchedulerAssignment} to {topology-id -> {[node port] [mem-on-heap mem-off-heap cpu]}}
         new-assigned-worker->resources (convert-assignments-to-worker->resources new-scheduler-assignments)
-        now-secs (current-time-secs)
+        now-secs (current-time-secs)                        ;;获取当前时间
 
         basic-supervisor-details-map (basic-supervisor-details-map storm-cluster-state)
 
@@ -995,6 +1005,7 @@
       (try (.notify topology-action-notifier storm-id action)
         (catch Exception e
         (log-warn-error e "Ignoring exception from Topology action notifier for storm-Id " storm-id))))))
+
 ;;读取整个集群的配置信息、nimbus的配置信息、从stormconf.ser反序列化topology配置信息和从stormcode.ser反 序列化出topology，
 ;; 然后通过调用activate-storm!函数将topology的元数据StormBase对象写入zookeeper的 /storm/storms/{topology id}文件中
 (defn- start-storm [nimbus storm-name storm-id topology-initial-status]
@@ -1004,7 +1015,8 @@
         blob-store (:blob-store nimbus)
         storm-conf (read-storm-conf conf storm-id blob-store)
         topology (system-topology! storm-conf (read-storm-topology storm-id blob-store))
-        num-executors (->> (all-components topology) (map-val num-start-executors))]
+        num-executors (->> (all-components topology) (map-val num-start-executors)) ;;所有组件的executor数量计算
+        num-acc-executors (->> (acc-components topology) (map-val num-start-executors))] ;;acc可加速组件的executor数量计算
     (log-message "Activating " storm-name ": " storm-id)
     (.activate-storm! storm-cluster-state
                       storm-id
@@ -1013,6 +1025,7 @@
                                   {:type topology-initial-status}
                                   (storm-conf TOPOLOGY-WORKERS)
                                   num-executors
+                                  num-acc-executors
                                   (storm-conf TOPOLOGY-SUBMITTER-USER)
                                   nil
                                   nil
@@ -1088,14 +1101,14 @@
        (map (fn [e] (if (map? e) e {e nil})))
        (apply merge)
        ))
-
+;;计算组件的并行度 TOPOLOGY-TASK是组件通过setNumTasks()设置的，num-start-executors是计算该组件通过setBolt或者setSpout设置的parallelism_hint,表示的是有多少个executor来执行这个组件
 (defn- component-parallelism [storm-conf component]
-  (let [storm-conf (merge storm-conf (component-conf component))
-        num-tasks (or (storm-conf TOPOLOGY-TASKS) (num-start-executors component))
-        max-parallelism (storm-conf TOPOLOGY-MAX-TASK-PARALLELISM)
+  (let [storm-conf (merge storm-conf (component-conf component)) ;;合并组件的conf和storm-conf
+        num-tasks (or (storm-conf TOPOLOGY-TASKS) (num-start-executors component)) ;;获取组件的task数量.如果组件没有通过setNumTasks()设置task数量，那么num-tasks就等于executor数量
+        max-parallelism (storm-conf TOPOLOGY-MAX-TASK-PARALLELISM) ;;获取组件的最大任务数量
         ]
     (if max-parallelism
-      (min max-parallelism num-tasks)
+      (min max-parallelism num-tasks)                       ;;如果conf中有TOPOLOGY-MAX-TASK-PARALLELISM设置，那么取这个值和num-tasks的最小值
       num-tasks)))
 
 ;;用于计算提交的topology中每个组件的并行度并且更新该组件的TOPOLOGY-TASKS配置项
@@ -1104,8 +1117,8 @@
     (doseq [[_ component] (all-components ret)]
       (.set_json_conf
         (.get_common component)
-        (->> {TOPOLOGY-TASKS (component-parallelism storm-conf component)}
-             (merge (component-conf component))
+        (->> {TOPOLOGY-TASKS (component-parallelism storm-conf component)} ;;计算每个组件的task数量
+             (merge (component-conf component))             ;;将task数量的配置更新到conf中
              to-json )))
     ret ))
 
@@ -1222,8 +1235,12 @@
                    (.set_host (:host %))
                    (.set_port (:port %))))))
 
-(defn- thriftify-executor-id [[first-task-id last-task-id]]
-  (ExecutorInfo. (int first-task-id) (int last-task-id)))
+(defn- thriftify-executor-id [^Executor executor]
+  (let [thriftify-executor (ExecutorInfo. (int (:start-task-id executor)) (int (:last-task-id executor)))]
+    (doto thriftify-executor
+      (.set_isAccExecutor (boolean (:is-acc-executor executor)))
+      (.set_isAssignedAccExecutor (boolean (:is-assigned-acc-executor executor))))
+    thriftify-executor))
 
 (def DISALLOWED-TOPOLOGY-NAME-STRS #{"/" "." ":" "\\"})
 
@@ -1329,7 +1346,7 @@
                     (.set-credentials! storm-cluster-state id new-creds topology-conf)
                     ))))))))
     (log-message "not a leader, skipping credential renewal.")))
-
+;;检查topology的各项worker和executor的数量，确保每个topology设置的worker数量和需要的executor数量没有超过nimbus-conf中的NIMBUS-SLOTS-PER-TOPOLOGY和NIMBUS-EXECUTORS-PER-TOPOLOGY
 (defn validate-topology-size [topo-conf nimbus-conf topology]
   (let [workers-count (get topo-conf TOPOLOGY-WORKERS)
         workers-allowed (get nimbus-conf NIMBUS-SLOTS-PER-TOPOLOGY)
@@ -1376,7 +1393,7 @@
 (defserverfn service-handler [conf inimbus]
   (.prepare inimbus conf (master-inimbus-dir conf))
   (log-message "Starting Nimbus with conf " conf)
-  (let [nimbus (nimbus-data conf inimbus)
+  (let [nimbus (nimbus-data conf inimbus)                   ;;创建nimbus-data
         blob-store (:blob-store nimbus)
         principal-to-local (AuthUtils/GetPrincipalToLocalPlugin conf)
         admin-users (or (.get conf NIMBUS-ADMINS) [])
@@ -1389,7 +1406,7 @@
                                           storm-name
                                           topology-conf
                                           operation)
-                  topology (try-read-storm-topology storm-id blob-store)
+                  topology (try-read-storm-topology storm-id blob-store) ;;該處獲得的topology是StormTopology類型
                   task->component (storm-task-info topology topology-conf)
                   base (.storm-base storm-cluster-state storm-id nil)
                   launch-time-secs (if base (:launch-time-secs base)
@@ -1398,10 +1415,12 @@
                   assignment (.assignment-info storm-cluster-state storm-id nil)
                   beats (map-val :heartbeat (get @(:heartbeats-cache nimbus)
                                                  storm-id))
-                  all-components (set (vals task->component))]
+                  all-components (set (vals task->component))
+                  acc-components (set (keys (:acc-component->executors base)))]
               {:storm-name storm-name
                :storm-cluster-state storm-cluster-state
-               :all-components all-components
+               :all-components general-components
+               :acc-components acc-components
                :launch-time-secs launch-time-secs
                :assignment assignment
                :beats beats
@@ -1433,7 +1452,7 @@
       (setup-blobstore nimbus))
 
     (when (is-leader nimbus :throw-exception false)
-      (doseq [storm-id (.active-storms (:storm-cluster-state nimbus))]
+      (doseq [storm-id (.active-storms (:storm-cluster-state nimbus))] ;;对当前所有处于活跃状态的Topology调用transition!方法，设置Topology的状态，这里将转移事件设置为：start-up
         (transition! nimbus storm-id :startup)))
     (schedule-recurring (:timer nimbus)
                         0
@@ -1473,7 +1492,7 @@
       (fn [] (.size (.supervisors (:storm-cluster-state nimbus) nil))))
 
     (start-metrics-reporters conf)
-
+    ;;下面的代码返回一个实现了Nimbus$Iface、Shutdownable和DaemonCommon接口的对象，该对象会被用来处理Nimbus服务请求以及关闭Nimbus服务
     (reify Nimbus$Iface
       (^void submitTopologyWithOpts
         [this ^String storm-name ^String uploadedJarLocation ^String serializedConf ^StormTopology topology
@@ -1878,6 +1897,7 @@
         (let [{:keys [storm-name
                       storm-cluster-state
                       all-components
+                      acc-components
                       launch-time-secs
                       assignment
                       beats
@@ -1900,7 +1920,7 @@
               errors (->> all-components
                           (map (fn [c] [c (errors-fn storm-cluster-state storm-id c)]))
                           (into {}))
-              executor-summaries (dofor [[executor [node port]] (:executor->node+port assignment)]
+              executor-summaries (dofor [[^Executor executor [node port]] (:executor->node+port assignment)]
                                         (let [host (-> assignment :node->host (get node))
                                               heartbeat (get beats executor)
                                               stats (:stats heartbeat)
@@ -2121,7 +2141,9 @@
             (.set_requested_cpu topo-page-info (get resources 2))
             (.set_assigned_memonheap topo-page-info (get resources 3))
             (.set_assigned_memoffheap topo-page-info (get resources 4))
-            (.set_assigned_cpu topo-page-info (get resources 5)))
+            (.set_assigned_cpu topo-page-info (get resources 5))
+            (.set_assigned_fpga_devices topo-page-info (get resuources 6))
+            (.set_assigned_gpu_devices topo-page-info (get resources 7)))
           (doto topo-page-info
             (.set_name (:storm-name info))
             (.set_status (extract-status-str (:base info)))
@@ -2201,7 +2223,7 @@
               topo-history-list (read-topology-history nimbus user admin-users)]
           (TopologyHistoryInfo. (distinct (concat active-ids-for-user topo-history-list)))))
 
-      Shutdownable
+      Shutdownable                                          ;;用来关闭Nimbus服务
       (shutdown [this]
         (mark! nimbus:num-shutdown-calls)
         (log-message "Shutting down master")
