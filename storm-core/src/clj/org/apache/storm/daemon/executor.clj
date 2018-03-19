@@ -230,7 +230,7 @@
         storm-conf (normalized-component-conf (:storm-conf worker) worker-context component-id)
         executor-type (executor-type worker-context component-id executor)
         batch-transfer->worker (disruptor/disruptor-queue
-                                  (str "executor"  executor-id "-send-queue")
+                                  (str "executor"  executor "-send-queue")
                                   (storm-conf TOPOLOGY-EXECUTOR-SEND-BUFFER-SIZE)
                                   (storm-conf TOPOLOGY-DISRUPTOR-WAIT-TIMEOUT-MILLIS)
                                   :producer-type :single-threaded
