@@ -279,7 +279,7 @@
   (-> StormTopology/metaDataMap clojurify-structure keys))
 
 (def STORM-TOPOLOGY-FIELDS-EXECLUDE-ACCBOLT
-  (-> (.remove StormTopology/metaDataMap StormTopology$_Fields/ACC_BOLTS) clojurify-structure keys))
+  (-> (filter-key #(not= % StormTopology$_Fields/ACC_BOLTS) StormTopology/metaDataMap) clojurify-structure keys))
 
 (def SPOUT-FIELDS
   [StormTopology$_Fields/SPOUTS
