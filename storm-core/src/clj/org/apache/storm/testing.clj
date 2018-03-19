@@ -484,7 +484,8 @@
                                                                 (mk-direct-grouping)
                                                                 (mk-global-grouping))]))
                                                {}
-                                               nil))))
+                                               nil)
+                    false)))
     {:topology topology
      :capturer capturer}))
 
