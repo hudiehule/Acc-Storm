@@ -236,7 +236,7 @@
 (defn clojurify-stats [stats]
   (if stats
     (map-val clojurify-executor-stats
-      (map-key (fn [x] (list (.get_task_start x) (.get_task_end x) (.is_isAccExecutor x) (.is_isAssignedAccExecutor)))
+      (map-key (fn [x] (list (.get_task_start x) (.get_task_end x) (.is_isAccExecutor x) (.is_isAssignedAccExecutor x)))
         stats))
     {}))
 
