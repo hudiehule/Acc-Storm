@@ -2142,7 +2142,7 @@
             (.set_assigned_memonheap topo-page-info (get resources 3))
             (.set_assigned_memoffheap topo-page-info (get resources 4))
             (.set_assigned_cpu topo-page-info (get resources 5))
-            (.set_assigned_fpga_devices topo-page-info (get resuources 6))
+            (.set_assigned_fpga_devices topo-page-info (get resources 6))
             (.set_assigned_gpu_devices topo-page-info (get resources 7)))
           (doto topo-page-info
             (.set_name (:storm-name info))
