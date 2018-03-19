@@ -752,7 +752,7 @@
         assigned-executor-type (assigned-executor-type-form-info info)
         uptime (.get_uptime_secs summ)]
     {"id" exec-id
-     "assignedExecutorType"
+     "assignedExecutorType" assigned-executor-type
      "encodedId" (url-encode exec-id)
      "uptime" (pretty-uptime-sec uptime)
      "uptimeSeconds" uptime
