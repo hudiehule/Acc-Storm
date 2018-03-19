@@ -395,7 +395,7 @@
        ))
 
 (defn executor-id->tasks [[start-task-id last-task-id is-acc-executor is-assigned-acc-executor]]
-  (->> (range first-task-id (inc last-task-id))
+  (->> (range start-task-id (inc last-task-id))
        (map int)))
 
 (defn worker-context [worker]
