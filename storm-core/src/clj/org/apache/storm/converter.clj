@@ -225,12 +225,11 @@
 (defn thriftify-stats [stats]
   (if stats
     (map-val thriftify-executor-stats
-      (map-key (fn [list-executor-info]
-                 (let [executorInfo (ExecutorInfo.(int (first %1)) (int (second %1)))]
+      (map-key #(let [executorInfo (ExecutorInfo.(int (first %1)) (int (second %1)))]
                    (doto executorInfo
                      (.set_isAccExecutor (boolean (nth %1 2)))
                      (.set_isAssignedAccExecutor (boolean (nth %1 3))))
-                   executorInfo))
+                   executorInfo)
         stats))
     {}))
 
