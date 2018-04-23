@@ -268,7 +268,7 @@ public class ResourceAwareScheduler implements IScheduler {
             }
 
             Double[] resources = {requestedMemOnHeap, requestedMemOffHeap, requestedCpu,
-                    assignedMemOnHeap, assignedMemOffHeap, assignedCpu};
+                    assignedMemOnHeap, assignedMemOffHeap, assignedCpu,0.0, 0.0};
             LOG.debug("setTopologyResources for {}: requested on-heap mem, off-heap mem, cpu: {} {} {} " +
                             "assigned on-heap mem, off-heap mem, cpu: {} {} {}",
                     td.getId(), requestedMemOnHeap, requestedMemOffHeap, requestedCpu,
@@ -312,7 +312,7 @@ public class ResourceAwareScheduler implements IScheduler {
             Double totalCpu = node.getTotalCpuResources();
             Double usedMem = totalMem - node.getAvailableMemoryResources();
             Double usedCpu = totalCpu - node.getAvailableCpuResources();
-            Double[] resources = {totalMem, totalCpu, usedMem, usedCpu};
+            Double[] resources = {totalMem, totalCpu, usedMem, usedCpu,0.0, 0.0, 0.0, 0.0};
             supervisors_resources.put(entry.getKey(), resources);
         }
         cluster.setSupervisorsResourcesMap(supervisors_resources);

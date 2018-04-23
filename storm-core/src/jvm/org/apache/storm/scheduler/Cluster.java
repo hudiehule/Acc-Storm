@@ -37,6 +37,7 @@ public class Cluster {
     private Map<String, SupervisorDetails> supervisors;
     /**
      * key: supervisor id, value: supervisor's total and used resources
+     * The format of the Value: {totalMem, totalCpu, usedMem, usedCpu,totalFpgaDevices,usedFpgaDevices,totalGpuDevices,usedGpuDevices}
      */
     private Map<String, Double[]> supervisorsResources;
 

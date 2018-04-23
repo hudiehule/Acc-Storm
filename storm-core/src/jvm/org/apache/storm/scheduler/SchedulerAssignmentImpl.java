@@ -130,10 +130,10 @@ public class SchedulerAssignmentImpl implements SchedulerAssignment {
         for (Map.Entry<ExecutorDetails, WorkerSlot> entry : executorToSlot.entrySet()) {
             ExecutorDetails exec = entry.getKey();
             WorkerSlot ws = entry.getValue();
-            if (!ret.containsKey(ws)) {
-                ret.put(ws, new LinkedList<ExecutorDetails>());
-            }
             if(exec.isAssignedAccExecutor()){
+                if (!ret.containsKey(ws)) {
+                    ret.put(ws, new LinkedList<ExecutorDetails>());
+                }
                 ret.get(ws).add(exec);
             }
         }
