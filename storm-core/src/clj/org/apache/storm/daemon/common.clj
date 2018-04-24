@@ -181,7 +181,7 @@
   ;; validate all the component subscribe from component+stream which actually exists in the topology
   ;; and if it is a fields grouping, validate the corresponding field exists  
   (let [all-components (all-components topology)]
-    (doseq [[id cmp] all-components] (log-message "component name: " id))
+    (log-message "acc-components size" (count all-components))
     (doseq [[id comp] all-components
             :let [inputs (.. comp get_common get_inputs)]]
       (doseq [[global-stream-id grouping] inputs
