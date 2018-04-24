@@ -286,3 +286,8 @@
    StormTopology$_Fields/STATE_SPOUTS])
 (def BOLT-FIELDS
   [StormTopology$_Fields/BOLTS])
+
+(def COMPONENT-FIELDS
+  [StormTopology$_Fields/SPOUTS
+   StormTopology$_Fields/STATE_SPOUTS
+   StormTopology$_Fields/BOLTS])

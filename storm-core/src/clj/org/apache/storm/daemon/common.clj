@@ -146,6 +146,12 @@
       (if-not (or (ThriftTopologyUtils/isKernelFileStr f) (ThriftTopologyUtils/isWorkerHook f) (ThriftTopologyUtils/isAccBolts f))
         (.getFieldValue topology f)))))
 
+(defn show-components [^StormTopology topology]
+  (let [components (apply merge {}
+                          (for [f thrift/COMPONENT-FIELDS]
+                            (.getFieldValue topology f)))]
+    (map-key #(log-message "component name:" %) components))
+  )
 ;;获取topology的所有的accbolts的generalbolt的形式
 (defn acc-components [^StormTopology topology]
   (let [bolt-components (.getFieldValue topology thrift/BOLT-FIELDS)]
@@ -181,7 +187,8 @@
   ;; validate all the component subscribe from component+stream which actually exists in the topology
   ;; and if it is a fields grouping, validate the corresponding field exists  
   (let [all-components (all-components topology)]
-    (log-message "acc-components size" (count all-components))
+    (log-message "acc-components size: " (count all-components))
+    (show-components topology)
     (doseq [[id comp] all-components
             :let [inputs (.. comp get_common get_inputs)]]
       (doseq [[global-stream-id grouping] inputs
