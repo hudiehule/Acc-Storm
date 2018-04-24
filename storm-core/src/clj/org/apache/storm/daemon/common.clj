@@ -142,14 +142,11 @@
 
 (defn all-components [^StormTopology topology]
   (apply merge {}
-    (for [f thrift/STORM-TOPOLOGY-FIELDS]
-      (if-not (or (ThriftTopologyUtils/isKernelFileStr f) (ThriftTopologyUtils/isWorkerHook f) (ThriftTopologyUtils/isAccBolts f))
-        (.getFieldValue topology f)))))
+         (for [f thrift/COMPONENT-FIELDS]
+           (.getFieldValue topology f))))
 
 (defn show-components [^StormTopology topology]
-  (let [components (apply merge {}
-                          (for [f thrift/COMPONENT-FIELDS]
-                            (.getFieldValue topology f)))]
+  (let [components (all-components topology)]
     (map-key #(log-message "component name:" %) components))
   )
 ;;获取topology的所有的accbolts的generalbolt的形式
