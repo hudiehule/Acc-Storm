@@ -872,8 +872,7 @@
         ;;schedule方法有两个参数：topologies和cluster ;topologies包含所有Topology的静态信息 cluster中包含了Topology的运行态信息 根据这两者就可以进行真正的调度分配
         _ (.schedule (:scheduler nimbus) topologies cluster)
         _ (.setTopologyResourcesMap cluster @(:id->resources nimbus))
-        _ (if-not (conf SCHEDULER-DISPLAY-RESOURCE) ((.updateAssignedMemoryForTopologyAndSupervisor cluster topologies)
-                                                      (.updateAssignedDevicesForTopologyAndSupervisor cluster topologies)) )
+        _ (if-not (conf SCHEDULER-DISPLAY-RESOURCE) (.updateAssignedMemoryForTopologyAndSupervisor cluster topologies))
         ;;merge with existing statuses
         _ (reset! (:id->sched-status nimbus) (merge (deref (:id->sched-status nimbus)) (.getStatusMap cluster)))
         _ (reset! (:node-id->resources nimbus) (.getSupervisorsResourcesMap cluster))

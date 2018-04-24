@@ -268,7 +268,7 @@ public class ResourceAwareScheduler implements IScheduler {
             }
 
             Double[] resources = {requestedMemOnHeap, requestedMemOffHeap, requestedCpu,
-                    assignedMemOnHeap, assignedMemOffHeap, assignedCpu,0.0, 0.0};
+                    assignedMemOnHeap, assignedMemOffHeap, assignedCpu, 0.0, 0.0};
             LOG.debug("setTopologyResources for {}: requested on-heap mem, off-heap mem, cpu: {} {} {} " +
                             "assigned on-heap mem, off-heap mem, cpu: {} {} {}",
                     td.getId(), requestedMemOnHeap, requestedMemOffHeap, requestedCpu,

@@ -725,6 +725,7 @@ public class Cluster {
                 this.supervisorsResources.put(nodeId, supervisor_resources);
             }
         }
+        updateAssignedDevicesForTopologyAndSupervisor(topologies);
     }
 
     public void updateAssignedDevicesForTopologyAndSupervisor(Topologies topologies) {
