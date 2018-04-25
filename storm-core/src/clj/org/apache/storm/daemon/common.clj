@@ -155,7 +155,7 @@
                                (for [f thrift/BOLT-FIELDS]
                                  (.getFieldValue topology f)))]
     (log-message "bolt-components size: " (count bolt-components))
-    (filter-key (fn [^Bolt bolt] (.is_isAccBolt bolt)) bolt-components)
+    (filter-val (fn [^Bolt bolt] (.is_isAccBolt bolt)) bolt-components)
     ))
 
 (defn general-components [^StormTopology topology]
