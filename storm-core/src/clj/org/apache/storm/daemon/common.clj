@@ -154,6 +154,7 @@
   (let [bolt-components (apply merge {}
                                (for [f thrift/BOLT-FIELDS]
                                  (.getFieldValue topology f)))]
+    (log-message "acc-components size: " (count bolt-components))
     (filter (fn [id ^Bolt bolt] (.is_isAccBolt bolt)) bolt-components)
     ))
 
@@ -189,7 +190,6 @@
   (let [all-components (all-components topology)]
     (log-message "all-components size: " (count all-components)) ;;hudie add
     (show-components topology)                              ;; hudie add
-    (log-message "acc-components size: " (count (acc-components topology)))
     (doseq [[id comp] all-components
             :let [inputs (.. comp get_common get_inputs)]]
       (doseq [[global-stream-id grouping] inputs
