@@ -16,7 +16,7 @@
 (ns org.apache.storm.daemon.common
   (:use [org.apache.storm log config util])
   (:import [org.apache.storm.generated StormTopology
-                                       InvalidTopologyException GlobalStreamId StormTopology$_Fields]
+                                       InvalidTopologyException GlobalStreamId StormTopology$_Fields Bolt]
            [org.apache.storm.utils ThriftTopologyUtils])
   (:import [org.apache.storm.utils Utils])
   (:import [org.apache.storm.daemon.metrics.reporters PreparableReporter]
@@ -151,8 +151,11 @@
   )
 ;;获取topology的所有的accbolts的generalbolt的形式
 (defn acc-components [^StormTopology topology]
-  (let [bolt-components (into {} (.getFieldValue topology thrift/BOLT-FIELDS))]
-    (filter-val #(.is_is_AccBolt %) bolt-components)))
+  (let [bolt-components (apply merge {}
+                               (for [f thrift/BOLT-FIELDS]
+                                 (.getFieldValue topology f)))]
+    (filter (fn [id ^Bolt bolt] (.is_isAccBolt bolt)) bolt-components)
+    ))
 
 (defn general-components [^StormTopology topology]
   (let [all-components (all-components topology)
@@ -184,8 +187,9 @@
   ;; validate all the component subscribe from component+stream which actually exists in the topology
   ;; and if it is a fields grouping, validate the corresponding field exists  
   (let [all-components (all-components topology)]
-    (log-message "acc-components size: " (count all-components))
-    (show-components topology)
+    (log-message "all-components size: " (count all-components)) ;;hudie add
+    (show-components topology)                              ;; hudie add
+    (log-message "acc-components size: " (count (acc-components topology)))
     (doseq [[id comp] all-components
             :let [inputs (.. comp get_common get_inputs)]]
       (doseq [[global-stream-id grouping] inputs
