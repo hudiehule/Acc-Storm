@@ -154,8 +154,8 @@
   (let [bolt-components (apply merge {}
                                (for [f thrift/BOLT-FIELDS]
                                  (.getFieldValue topology f)))]
-    (log-message "acc-components size: " (count bolt-components))
-    (filter (fn [id ^Bolt bolt] (.is_isAccBolt bolt)) bolt-components)
+    (log-message "bolt-components size: " (count bolt-components))
+    (filter-key (fn [^Bolt bolt] (.is_isAccBolt bolt)) bolt-components)
     ))
 
 (defn general-components [^StormTopology topology]
