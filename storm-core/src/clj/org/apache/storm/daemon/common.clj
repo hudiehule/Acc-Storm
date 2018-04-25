@@ -151,7 +151,7 @@
   )
 ;;获取topology的所有的accbolts的generalbolt的形式
 (defn acc-components [^StormTopology topology]
-  (let [bolt-components (.getFieldValue topology thrift/BOLT-FIELDS)]
+  (let [bolt-components (into {} (.getFieldValue topology thrift/BOLT-FIELDS))]
     (filter-val #(.is_is_AccBolt %) bolt-components)))
 
 (defn general-components [^StormTopology topology]
