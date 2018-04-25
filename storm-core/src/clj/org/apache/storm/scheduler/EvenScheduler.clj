@@ -52,7 +52,7 @@
                                 (+ (count available-slots) (count alive-assigned)))
         reassign-slots (take (- total-slots-to-use (count alive-assigned))
                              (sort-slots available-slots))
-        reassign-executors (sort (filter (fn [^Executor executor]
+        reassign-executors (sort #(compare (first %1) (first %2)) (filter (fn [^Executor executor]
                                            (let [alive-assigned-executors (set (apply concat (vals alive-assigned)))]
                                              (if (contains? alive-assigned-executors [(:start-task-id executor) (:last-task-id executor)])
                                                false
