@@ -134,12 +134,12 @@
         assign-slots-without-devices (set/difference new-assign-slots assign-slots-with-devices)
 
 
-        reassign-acc-executors (sort (filter (fn [^Executor executor]
+        reassign-acc-executors (sort #(compare (first %1) (first %2)) (filter (fn [^Executor executor]
                                                (let [alive-assigned-executors (set (apply concat (vals alive-assigned)))]
                                                  (if (contains? alive-assigned-executors [(:start-task-id executor) (:last-task-id executor)])
                                                    false
                                                    true))) can-assign-acc-executors))
-        reassign-general-executors (sort (filter (fn [^Executor executor]
+        reassign-general-executors (sort #(compare (first %1) (first %2)) (filter (fn [^Executor executor]
                                                    (let [alive-assigned-executors (set (apply concat (vals alive-assigned)))]
                                                      (if (contains? alive-assigned-executors [(:start-task-id executor) (:last-task-id executor)])
                                                        false

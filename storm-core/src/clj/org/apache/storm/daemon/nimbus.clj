@@ -880,8 +880,8 @@
     (.getAssignments cluster)))
 
 (defn changed-executors [executor->node+port new-executor->node+port]
-  (let [executor->node+port (if executor->node+port (sort executor->node+port) nil)
-        new-executor->node+port (if new-executor->node+port (sort new-executor->node+port) nil)
+  (let [executor->node+port (if executor->node+port (sort #(compare (first (first %1))  (first (first %2))) executor->node+port) nil)
+        new-executor->node+port (if new-executor->node+port (sort #(compare (first (first %1))  (first (first %2))) new-executor->node+port) nil)
         slot-assigned (reverse-map executor->node+port)
         new-slot-assigned (reverse-map new-executor->node+port)
         brand-new-slots (map-diff slot-assigned new-slot-assigned)]
