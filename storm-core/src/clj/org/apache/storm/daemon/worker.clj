@@ -42,7 +42,8 @@
   (:import [org.apache.logging.log4j LogManager])
   (:import [org.apache.logging.log4j Level])
   (:import [org.apache.logging.log4j.core.config LoggerConfig])
-  (:import [org.apache.storm.generated LogConfig LogLevelAction])
+  (:import [org.apache.storm.generated LogConfig LogLevelAction]
+           (org.apache.storm.daemon.common Executor))
   (:gen-class))
 
 (defmulti mk-suicide-fn cluster-mode)
@@ -53,7 +54,7 @@
     (doall
      (concat
       [Constants/SYSTEM_EXECUTOR_ID]
-      (mapcat (fn [[executor loc]]
+      (mapcat (fn [[^Executor executor loc]]
                 (if (= loc [assignment-id port])
                   [executor]
                   ))
@@ -62,9 +63,9 @@
 (defnk do-executor-heartbeats [worker :executors nil]
   ;; stats is how we know what executors are assigned to this worker 
   (let [stats (if-not executors
-                  (into {} (map (fn [e] {e nil}) (:executors worker)))
+                  (into {} (map (fn [^Executor e] {e nil}) (:executors worker)))
                   (->> executors
-                    (map (fn [e] {(executor/get-executor-id e) (executor/render-stats e)}))
+                    (map (fn [^Executor e] {(executor/get-executor-id e) (executor/render-stats e)}))
                     (apply merge)))
         zk-hb {:storm-id (:storm-id worker)
                :executor-stats stats
@@ -207,7 +208,7 @@
 (defn- mk-receive-queue-map [storm-conf executors]
   (->> executors
        ;; TODO: this depends on the type of executor
-       (map (fn [e] [e (disruptor/disruptor-queue (str "receive-queue" e)
+       (map (fn [^Executor e] [e (disruptor/disruptor-queue (str "receive-queue" e)
                                                   (storm-conf TOPOLOGY-EXECUTOR-RECEIVE-BUFFER-SIZE)
                                                   (storm-conf TOPOLOGY-DISRUPTOR-WAIT-TIMEOUT-MILLIS)
                                                   :batch-size (storm-conf TOPOLOGY-DISRUPTOR-BATCH-SIZE)
@@ -258,7 +259,7 @@
         executor-receive-queue-map (mk-receive-queue-map storm-conf executors)
 
         receive-queue-map (->> executor-receive-queue-map
-                               (mapcat (fn [[e queue]] (for [t (executor-id->tasks e)] [t queue])))
+                               (mapcat (fn [[^Executor e queue]] (for [t (executor-id->tasks e)] [t queue])))
                                (into {}))
 
         topology (read-supervisor-topology conf storm-id)
@@ -306,7 +307,7 @@
       :executor-receive-queue-map executor-receive-queue-map
       :short-executor-receive-queue-map (map-key first executor-receive-queue-map)
       :task->short-executor (->> executors
-                                 (mapcat (fn [e] (for [t (executor-id->tasks e)] [t (first e)])))
+                                 (mapcat (fn [^Executor e] (for [t (executor-id->tasks e)] [t (first e)])))
                                  (into {})
                                  (HashMap.))
       :suicide-fn (mk-suicide-fn conf)
