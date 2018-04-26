@@ -154,7 +154,6 @@
   (let [bolt-components (apply merge {}
                                (for [f thrift/BOLT-FIELDS]
                                  (.getFieldValue topology f)))]
-    (log-message "bolt-components size: " (count bolt-components))
     (filter-val (fn [^Bolt bolt] (.is_isAccBolt bolt)) bolt-components)
     ))
 
@@ -403,9 +402,11 @@
        (into {})                                            ;;将上面得到的放入一个map中返回
        ))
 
-(defn executor-id->tasks [[start-task-id last-task-id is-acc-executor is-assigned-acc-executor]]
-  (->> (range start-task-id (inc last-task-id))
-       (map int)))
+(defn executor-id->tasks [^Executor executor]
+  (let [start-task-id (first executor)
+        last-task-id (second executor)]
+    (->> (range start-task-id (inc last-task-id))
+         (map int))))
 
 (defn worker-context [worker]
   (WorkerTopologyContext. (:system-topology worker)
