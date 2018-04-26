@@ -160,7 +160,7 @@
 (defn general-components [^StormTopology topology]
   (let [all-components (all-components topology)
          acc-components (acc-components topology)]
-         (filter-key #(not (contains? acc-components %)) all-components)))
+         (filter-key #(not (contains? acc-components (key %))) all-components)))
 
 (defn component-conf [component]
   (->> component
@@ -403,8 +403,8 @@
        ))
 
 (defn executor-id->tasks [^Executor executor]
-  (let [start-task-id (first executor)
-        last-task-id (second executor)]
+  (let [start-task-id (:start-task-id executor)
+        last-task-id (:last-task-id executor)]
     (->> (range start-task-id (inc last-task-id))
          (map int))))
 

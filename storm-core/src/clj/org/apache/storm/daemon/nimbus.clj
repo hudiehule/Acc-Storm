@@ -1415,10 +1415,11 @@
                   beats (map-val :heartbeat (get @(:heartbeats-cache nimbus)
                                                  storm-id))
                   all-components (set (vals task->component))
-                  acc-components (set (keys (:acc-component->executors base)))]
+                  general-components (set (keys (general-components topology)))
+                  acc-components (set (keys (acc-components topology)))]
               {:storm-name storm-name
                :storm-cluster-state storm-cluster-state
-               :all-components general-components
+               :general-components general-components           ;;该处设置的是普通的组件
                :acc-components acc-components
                :launch-time-secs launch-time-secs
                :assignment assignment
@@ -1895,7 +1896,7 @@
         (mark! nimbus:num-getTopologyInfoWithOpts-calls)
         (let [{:keys [storm-name
                       storm-cluster-state
-                      all-components
+                      general-components
                       acc-components
                       launch-time-secs
                       assignment
@@ -1916,7 +1917,7 @@
                                       num-err-choice
                                       "'")
                             get-errors))
-              errors (->> all-components
+              errors (->> general-components
                           (map (fn [c] [c (errors-fn storm-cluster-state storm-id c)]))
                           (into {}))
               executor-summaries (dofor [[^Executor executor [node port]] (:executor->node+port assignment)]
