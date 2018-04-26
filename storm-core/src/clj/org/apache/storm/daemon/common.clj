@@ -160,7 +160,7 @@
 (defn general-components [^StormTopology topology]
   (let [all-components (all-components topology)
          acc-components (acc-components topology)]
-         (filter-key #(not (contains? acc-components (key %))) all-components)))
+         (filter-key #(not (contains? acc-components %)) all-components)))
 
 (defn component-conf [component]
   (->> component
