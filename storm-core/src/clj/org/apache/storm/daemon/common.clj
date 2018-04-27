@@ -402,11 +402,15 @@
        (into {})                                            ;;将上面得到的放入一个map中返回
        ))
 
-(defn executor-id->tasks [^Executor executor]
-  (let [start-task-id (:start-task-id executor)
-        last-task-id (:last-task-id executor)]
-    (->> (range start-task-id (inc last-task-id))
-         (map int))))
+
+(defn executor-id->tasks [[first-task-id last-task-id]]
+  (->> (range first-task-id (inc last-task-id))
+       (map int)))
+
+(defn executor->tasks [^Executor executor]
+  (let [start-id (:start-task-id executor)
+        last-id (:last-task-id executor)]
+    (executor-id->tasks [start-id last-id])))
 
 (defn worker-context [worker]
   (WorkerTopologyContext. (:system-topology worker)
@@ -427,7 +431,7 @@
 
 (defn to-task->node+port [executor->node+port]
   (->> executor->node+port
-       (mapcat (fn [[e node+port]] (for [t (executor-id->tasks e)] [t node+port])))
+       (mapcat (fn [[^Executor e node+port]] (for [t (executor->tasks e)] [t node+port])))
        (into {})))
 
 (defn mk-authorization-handler [klassname conf]

@@ -259,7 +259,7 @@
         executor-receive-queue-map (mk-receive-queue-map storm-conf executors)
 
         receive-queue-map (->> executor-receive-queue-map
-                               (mapcat (fn [[^Executor e queue]] (for [t (executor-id->tasks e)] [t queue])))
+                               (mapcat (fn [[^Executor e queue]] (for [t (executor->tasks e)] [t queue])))
                                (into {}))
 
         topology (read-supervisor-topology conf storm-id)
@@ -307,7 +307,7 @@
       :executor-receive-queue-map executor-receive-queue-map
       :short-executor-receive-queue-map (map-key first executor-receive-queue-map)
       :task->short-executor (->> executors
-                                 (mapcat (fn [^Executor e] (for [t (executor-id->tasks e)] [t (first e)])))
+                                 (mapcat (fn [^Executor e] (for [t (executor->tasks e)] [t (:start-task-id e)])))
                                  (into {})
                                  (HashMap.))
       :suicide-fn (mk-suicide-fn conf)

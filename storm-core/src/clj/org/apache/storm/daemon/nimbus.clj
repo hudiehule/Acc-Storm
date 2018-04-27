@@ -1862,7 +1862,7 @@
                                                      (:storm-name base)
                                                      (->> (:executor->node+port assignment)
                                                        keys
-                                                       (mapcat executor-id->tasks)
+                                                       (mapcat executor->tasks)
                                                        count)
                                                      (->> (:executor->node+port assignment)
                                                        keys

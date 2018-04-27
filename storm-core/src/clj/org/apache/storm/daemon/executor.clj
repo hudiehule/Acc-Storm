@@ -225,7 +225,7 @@
 
 (defn mk-executor-data [worker ^Executor executor]
   (let [worker-context (worker-context worker)
-        task-ids (executor-id->tasks executor)
+        task-ids (executor->tasks executor)
         component-id (.getComponentId worker-context (first task-ids))
         storm-conf (normalized-component-conf (:storm-conf worker) worker-context component-id)
         executor-type (executor-type worker-context component-id executor)
