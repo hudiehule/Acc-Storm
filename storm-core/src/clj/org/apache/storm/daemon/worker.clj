@@ -51,6 +51,7 @@
 (defn read-worker-executors [storm-conf storm-cluster-state storm-id assignment-id port assignment-versions]
   (log-message "Reading Assignments.")
   (let [assignment (:executor->node+port (.assignment-info storm-cluster-state storm-id nil))]
+    _ (log-message assignment)
     (doall
      (concat
       [Constants/SYSTEM_EXECUTOR_ID]
