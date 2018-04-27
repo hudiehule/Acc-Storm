@@ -60,7 +60,7 @@
                             (.set_master_code_dir (:master-code-dir assignment))
                             (.set_node_host (:node->host assignment))
                             (.set_executor_node_port (into {}
-                                                           (map (fn [[k v]]
+                                                           (map (fn [[^Executor k v]]
                                                                   (let [executorInfo (ExecutorInfo. (int (:start-task-id k)) (int (:last-task-id k)))]
                                                                     (doto executorInfo
                                                                       (.set_isAccExecutor (boolean (:is-acc-executor k)) )
@@ -69,7 +69,7 @@
                                                                 (:executor->node+port assignment))))
                             (.set_executor_start_time_secs
                               (into {}
-                                    (map (fn [[k v]]
+                                    (map (fn [[^Executor k v]]
                                            (let [executorInfo (ExecutorInfo. (int (:start-task-id k)) (int (:last-task-id k)))]
                                              (doto executorInfo
                                                (.set_isAccExecutor (boolean (:is-acc-executor k)) )

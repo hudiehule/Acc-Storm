@@ -52,11 +52,10 @@
                                 (+ (count available-slots) (count alive-assigned)))
         reassign-slots (take (- total-slots-to-use (count alive-assigned))
                              (sort-slots available-slots))
-        reassign-executors (sort #(compare (first %1) (first %2)) (filter (fn [^Executor executor]
-                                           (let [alive-assigned-executors (set (apply concat (vals alive-assigned)))]
-                                             (if (contains? alive-assigned-executors [(:start-task-id executor) (:last-task-id executor)])
-                                               false
-                                               true))) all-executors))
+        alive-assigned-executors (set (apply concat (vals alive-assigned)))
+        reassign-executors (sort #(compare (:start-task-id %1) (:start-task-id %2)) (filter #(not (contains? alive-assigned-executors [(:start-task-id %) (:last-task-id %)])) all-executors))
+        _ (log-message "hudie add reassign-executors")
+        _ (map #(log-message "[" (:start-task-id %) " " (:last-task-id %) "]") reassign-executors)
         reassignment (into {}
                            (map vector
                                 reassign-executors
@@ -105,6 +104,7 @@
                              (map #(vector (.getNodeId %) (.getPort %))))
         all-sorted-slots ((sort-slots all-available-slots))
         alive-assigned (get-alive-assigned-node+port->executors cluster topology-id)
+        alive-assigned-executors (set (apply concat (vals alive-assigned))) ;;这里的executor的形式是[start-task-id last-task-id]
         total-slots-to-use (min (.getNumWorkers topology)   ;;计算可用的slots数量
                                 (+ (count all-available-slots) (count alive-assigned)))
 
@@ -134,16 +134,8 @@
         assign-slots-without-devices (set/difference new-assign-slots assign-slots-with-devices)
 
 
-        reassign-acc-executors (sort #(compare (first %1) (first %2)) (filter (fn [^Executor executor]
-                                               (let [alive-assigned-executors (set (apply concat (vals alive-assigned)))]
-                                                 (if (contains? alive-assigned-executors [(:start-task-id executor) (:last-task-id executor)])
-                                                   false
-                                                   true))) can-assign-acc-executors))
-        reassign-general-executors (sort #(compare (first %1) (first %2)) (filter (fn [^Executor executor]
-                                                   (let [alive-assigned-executors (set (apply concat (vals alive-assigned)))]
-                                                     (if (contains? alive-assigned-executors [(:start-task-id executor) (:last-task-id executor)])
-                                                       false
-                                                       true))) general-executors))
+        reassign-acc-executors (sort #(compare (:start-task-id %1) (:start-task-id %2)) (filter #(not (contains? alive-assigned-executors [(:start-task-id %) (:last-task-id %)])) can-assign-acc-executors))
+        reassign-general-executors (sort #(compare (:start-task-id %1) (:start-task-id %2)) (filter #(not (contains? alive-assigned-executors [(:start-task-id %) (:last-task-id %)])) general-executors))
 
         acc-executors-reassignment (into {}
                                          (map vector
