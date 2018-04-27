@@ -410,6 +410,7 @@
 (defn executor->tasks [^Executor executor]
   (let [start-id (:start-task-id executor)
         last-id (:last-task-id executor)]
+    (log-message "hudie add : executor-id: [" start-id " " last-id "]")
     (executor-id->tasks [start-id last-id])))
 
 (defn worker-context [worker]
