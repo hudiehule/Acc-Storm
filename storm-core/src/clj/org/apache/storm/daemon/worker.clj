@@ -51,7 +51,7 @@
 (defn read-worker-executors [storm-conf storm-cluster-state storm-id assignment-id port assignment-versions]
   (log-message "Reading Assignments.")
   (let [assignment (:executor->node+port (.assignment-info storm-cluster-state storm-id nil))]
-    _ (log-message assignment)
+    (log-message "" assignment)
     (doall
      (concat
       [Constants/SYSTEM_EXECUTOR_ID]
@@ -254,7 +254,8 @@
   (let [assignment-versions (atom {})
         executors (set (read-worker-executors storm-conf storm-cluster-state storm-id assignment-id port assignment-versions))
         _ (log-message "hudie add the worker's executors:")
-        _ (map #(log-message "[" (:start-task-id %) " " (:last-task-id %) " " (:is-acc-executor %) " " (:is-assigned-acc-executor %) "]") executors)
+        _ (log-message ""  executors)
+        _ (log-message "test end")
         transfer-queue (disruptor/disruptor-queue "worker-transfer-queue" (storm-conf TOPOLOGY-TRANSFER-BUFFER-SIZE)
                                                   (storm-conf TOPOLOGY-DISRUPTOR-WAIT-TIMEOUT-MILLIS)
                                                   :batch-size (storm-conf TOPOLOGY-DISRUPTOR-BATCH-SIZE)
