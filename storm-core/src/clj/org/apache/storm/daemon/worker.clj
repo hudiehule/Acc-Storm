@@ -53,8 +53,8 @@
   (let [assignment (:executor->node+port (.assignment-info storm-cluster-state storm-id nil))]
     (log-message "" assignment)
     (doall
-     (merge
-      [(Executor. -1 -1 false false)]
+     (concat
+      [(Executor. -1 -1 false false)]                       ;;将system-exeecutor-id添加进来 system-executor的id为-1
       (mapcat (fn [[^Executor executor loc]]
                 (if (= loc [assignment-id port])
                   [executor]
