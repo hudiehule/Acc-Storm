@@ -22,7 +22,8 @@
             ExecutorInfo LSWorkerHeartbeat
             LSTopoHistory LSTopoHistoryList
             WorkerResources])
-  (:import [org.apache.storm.utils LocalState]))
+  (:import [org.apache.storm.utils LocalState]
+           (org.apache.storm.daemon.common Executor)))
 
 (def LS-WORKER-HEARTBEAT "worker-heartbeat")
 (def LS-ID "supervisor-id")
@@ -71,7 +72,10 @@
     (into {} (.get_approved_workers tmp))))
 
 (defn ->ExecutorInfo
-  [[low high]] (ExecutorInfo. low high))
+  [^Executor executor] (let [executorInfo (ExecutorInfo. (:start-task-id executor) (:last-task-id executor))]
+                         (.set_isAccExecutor executorInfo (:is-acc-executor executor))
+                         (.set_isAssignedAccExecutor executorInfo (:is-assigned-acc-executor executor))
+                         executorInfo) )
 
 (defn ->ExecutorInfo-list
   [executors]
@@ -81,7 +85,7 @@
   [executors]
   (into [] 
     (for [exec-info executors] 
-      [(.get_task_start exec-info) (.get_task_end exec-info)])))
+      (Executor. (.get_task_start exec-info) (.get_task_end exec-info) (.is_isAccExecutor exec-info) (.is_isAssignedAccExecutor exec-info)))))
 
 (defn ->LocalAssignment
   [{storm-id :storm-id executors :executors resources :resources}]
