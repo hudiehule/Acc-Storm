@@ -53,8 +53,8 @@
   (let [assignment (:executor->node+port (.assignment-info storm-cluster-state storm-id nil))]
     (log-message "" assignment)
     (doall
-     (concat
-      [Constants/SYSTEM_EXECUTOR_ID]
+     (merge
+      [(Executor. -1 -1 false false)]
       (mapcat (fn [[^Executor executor loc]]
                 (if (= loc [assignment-id port])
                   [executor]
