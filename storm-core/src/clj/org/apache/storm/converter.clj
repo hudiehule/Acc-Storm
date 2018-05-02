@@ -225,10 +225,10 @@
 (defn thriftify-stats [stats]
   (if stats
     (map-val thriftify-executor-stats
-      (map-key #(let [executorInfo (ExecutorInfo.(int (first %1)) (int (second %1)))]
+      (map-key #(let [executorInfo (ExecutorInfo.(int (:start-task-id %)) (int (:last-task-id %)))]
                    (doto executorInfo
-                     (.set_isAccExecutor (boolean (nth %1 2)))
-                     (.set_isAssignedAccExecutor (boolean (nth %1 3))))
+                     (.set_isAccExecutor (boolean (:is-acc-executor %)))
+                     (.set_isAssignedAccExecutor (boolean (:is-assigned-acc-executor %))))
                    executorInfo)
         stats))
     {}))
@@ -236,7 +236,7 @@
 (defn clojurify-stats [stats]
   (if stats
     (map-val clojurify-executor-stats
-      (map-key (fn [x] (list (.get_task_start x) (.get_task_end x) (.is_isAccExecutor x) (.is_isAssignedAccExecutor x)))
+      (map-key (fn [x] (Executor. (.get_task_start x) (.get_task_end x) (.is_isAccExecutor x) (.is_isAssignedAccExecutor x)))
         stats))
     {}))
 

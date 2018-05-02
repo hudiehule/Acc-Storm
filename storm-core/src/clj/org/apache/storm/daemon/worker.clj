@@ -66,7 +66,7 @@
   (let [stats (if-not executors
                   (into {} (map (fn [^Executor e] {e nil}) (:executors worker)))
                   (->> executors
-                    (map (fn [^Executor e] {(executor/get-executor-id e) (executor/render-stats e)}))
+                    (map (fn [^Executor e] {e (executor/render-stats e)}))
                     (apply merge)))
         zk-hb {:storm-id (:storm-id worker)
                :executor-stats stats
@@ -309,7 +309,7 @@
       :cached-task->node+port (atom {})
       :transfer-queue transfer-queue
       :executor-receive-queue-map executor-receive-queue-map
-      :short-executor-receive-queue-map (map-key first executor-receive-queue-map)
+      :short-executor-receive-queue-map (map-key :start-task-id executor-receive-queue-map)
       :task->short-executor (->> executors
                                  (mapcat (fn [^Executor e] (for [t (executor->tasks e)] [t (:start-task-id e)])))
                                  (into {})
