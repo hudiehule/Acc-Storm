@@ -66,7 +66,7 @@
   (let [stats (if-not executors
                   (into {} (map (fn [^Executor e] {e nil}) (:executors worker)))
                   (->> executors
-                    (map (fn [^Executor e] {e (executor/render-stats e)}))
+                    (map (fn [e] {(executor/get-executor-info e) (executor/render-stats e)}))
                     (apply merge)))
         zk-hb {:storm-id (:storm-id worker)
                :executor-stats stats
@@ -641,7 +641,7 @@
 
         _ (run-worker-start-hooks worker)
 
-        _ (reset! executors (dofor [e (:executors worker)] (executor/mk-executor worker e initial-credentials)))
+        _ (reset! executors (dofor [^Executor e (:executors worker)] (executor/mk-executor worker e initial-credentials)))
 
         transfer-tuples (mk-transfer-tuples-handler worker)
         

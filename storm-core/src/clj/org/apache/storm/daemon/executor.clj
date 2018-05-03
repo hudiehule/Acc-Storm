@@ -190,6 +190,7 @@
 (defprotocol RunningExecutor
   (render-stats [this])
   (get-executor-id [this])
+  (get-executor-info [this])
   (credentials-changed [this creds])
   (get-backpressure-flag [this]))
 
@@ -241,6 +242,7 @@
      :worker worker
      :worker-context worker-context
      :executor-id [(:start-task-id executor) (:last-task-id executor)]
+     :executor-all-info executor                            ;;保留全部的executor信息
      :task-ids task-ids
      :component-id component-id
      :open-or-prepare-was-called? (atom false)
@@ -369,7 +371,7 @@
         executor-id [(:start-task-id executor-info) (:last-task-id executor-info)]
         _ (log-message "Loading " (if-let [is-assigned-acc (:is-assigned-acc-executor executor-info)]
                                              "acc"
-                                             "general") "executor " (:component-id executor-data) ":" (pr-str executor-id))
+                                             "general ") "executor " (:component-id executor-data) ":" (pr-str executor-id))
         task-datas (->> executor-data
                         :task-ids
                         (map (fn [t] [t (task/mk-task executor-data t)]))
@@ -403,6 +405,8 @@
         (stats/render-stats! (:stats executor-data)))
       (get-executor-id [this]
         executor-id)
+      (get-executor-info [this]
+        executor-info)
       (credentials-changed [this creds]
         (let [receive-queue (:receive-queue executor-data)
               context (:worker-context executor-data)
