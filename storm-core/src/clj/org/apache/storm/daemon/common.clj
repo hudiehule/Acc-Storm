@@ -187,8 +187,8 @@
   ;; validate all the component subscribe from component+stream which actually exists in the topology
   ;; and if it is a fields grouping, validate the corresponding field exists  
   (let [all-components (all-components topology)]
-    (log-message "all-components size: " (count all-components)) ;;hudie add
-    (show-components topology)                              ;; hudie add
+    ;;(log-message "all-components size: " (count all-components)) ;;hudie add
+    ;;  (show-components topology)                              ;; hudie add
     (doseq [[id comp] all-components
             :let [inputs (.. comp get_common get_inputs)]]
       (doseq [[global-stream-id grouping] inputs
@@ -410,7 +410,7 @@
 (defn executor->tasks [^Executor executor]
   (let [start-id (:start-task-id executor)
         last-id (:last-task-id executor)]
-    (log-message "hudie add : executor-id: [" start-id " " last-id "]")
+    ;;   (log-message "hudie add : executor-id: [" start-id " " last-id "]")
     (executor-id->tasks [start-id last-id])))
 
 (defn worker-context [worker]
