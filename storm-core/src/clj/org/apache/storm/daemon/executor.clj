@@ -28,6 +28,7 @@
   (:import [org.apache.storm.grouping CustomStreamGrouping])
   (:import [org.apache.storm.task WorkerTopologyContext IBolt OutputCollector IOutputCollector])
   (:import [org.apache.storm.generated GlobalStreamId Bolt])
+  (:import [org.apache.storm.topology IAccBolt])
   (:import [org.apache.storm.utils Utils TupleUtils MutableObject RotatingMap RotatingMap$ExpiredCallback MutableLong Time DisruptorQueue WorkerBackpressureThread])
   (:import [com.lmax.disruptor InsufficientCapacityException])
   (:import [org.apache.storm.serialization KryoTupleSerializer])
@@ -36,9 +37,8 @@
   (:import [org.apache.storm Config Constants])
   (:import [org.apache.storm.cluster ClusterStateContext DaemonType])
   (:import [org.apache.storm.grouping LoadAwareCustomStreamGrouping LoadAwareShuffleGrouping LoadMapping ShuffleGrouping])
-  (:import [java.util.concurrent ConcurrentLinkedQueue]
-           (org.apache.storm.daemon.common Executor)
-           (org.apache.storm.topology IAccBolt))
+  (:import [java.util.concurrent ConcurrentLinkedQueue])
+  (:import [org.apache.storm.daemon.common Executor])
   (:require [org.apache.storm [thrift :as thrift]
              [cluster :as cluster] [disruptor :as disruptor] [stats :as stats]])
   (:require [org.apache.storm.daemon [task :as task]])

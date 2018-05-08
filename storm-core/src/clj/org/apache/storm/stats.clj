@@ -24,8 +24,8 @@
                                        ExecutorAggregateStats SpecificAggregateStats
                                        SpoutAggregateStats TopologyPageInfo TopologyStats Bolt])
   (:import [org.apache.storm.utils Utils])
-  (:import [org.apache.storm.metric.internal MultiCountStatAndMetric MultiLatencyStatAndMetric]
-           (org.apache.storm.daemon.common Executor))
+  (:import [org.apache.storm.metric.internal MultiCountStatAndMetric MultiLatencyStatAndMetric])
+  (:import [org.apache.storm.daemon.common Executor])
   (:use [org.apache.storm log util])
   (:use [clojure.math.numeric-tower :only [ceil]]))
 

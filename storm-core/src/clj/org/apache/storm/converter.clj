@@ -16,8 +16,8 @@
 (ns org.apache.storm.converter
   (:import [org.apache.storm.generated SupervisorInfo NodeInfo Assignment WorkerResources
                                        StormBase TopologyStatus ClusterWorkerHeartbeat ExecutorInfo ErrorInfo Credentials RebalanceOptions KillOptions
-                                       TopologyActionOptions DebugOptions ProfileRequest]
-           (org.apache.storm.daemon.common Executor))
+                                       TopologyActionOptions DebugOptions ProfileRequest])
+  (:import [org.apache.storm.daemon.common Executor])
   (:use [org.apache.storm util stats log])
   (:require [org.apache.storm.daemon [common :as common]]))
 

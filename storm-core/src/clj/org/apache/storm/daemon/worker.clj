@@ -42,8 +42,8 @@
   (:import [org.apache.logging.log4j LogManager])
   (:import [org.apache.logging.log4j Level])
   (:import [org.apache.logging.log4j.core.config LoggerConfig])
-  (:import [org.apache.storm.generated LogConfig LogLevelAction]
-           (org.apache.storm.daemon.common Executor))
+  (:import [org.apache.storm.generated LogConfig LogLevelAction])
+  (:import [org.apache.storm.daemon.common Executor])
   (:gen-class))
 
 (defmulti mk-suicide-fn cluster-mode)
