@@ -735,8 +735,9 @@
                                 (when execute-sampler?
                                   (.setExecuteSampleStartTime tuple now))
                                 (if-let [is-acc-task (:is-acc-executor task-data)] ;;判断task是不是一个acc-executor的task 如果是 则需要执行accExecute方法 否则执行execute方法
-                                     ((.accExecute ^IAccBolt bolt-obj tuple)
-                                       (log-message "accExecute method"))
+                                  (.accExecute ^IAccBolt bolt-obj tuple)
+                                    ;;   (log-message "accExecute method")
+
                                      (.execute ^IBolt bolt-obj tuple))
                                 (let [delta (tuple-execute-time-delta! tuple)]
                                   (when debug?
@@ -760,7 +761,10 @@
         
         (log-message "Preparing bolt " component-id ":" (keys task-datas))
         (doseq [[task-id task-data] task-datas
-                :let [^IBolt bolt-obj (:object task-data)
+                :let [bolt-obj (:object task-data)
+                      bolt-obj (if (:is-acc-executor task-data)
+                                 (^IAccBolt bolt-obj)
+                                 (^IBolt bolt-obj))
                       tasks-fn (:tasks-fn task-data)
                       user-context (:user-context task-data)
                       bolt-emit (fn [stream anchors values task]
