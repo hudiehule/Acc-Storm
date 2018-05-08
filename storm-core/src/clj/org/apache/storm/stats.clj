@@ -25,8 +25,8 @@
                                        SpoutAggregateStats TopologyPageInfo TopologyStats Bolt])
   (:import [org.apache.storm.utils Utils])
   (:import [org.apache.storm.metric.internal MultiCountStatAndMetric MultiLatencyStatAndMetric])
-  (:import [org.apache.storm.daemon.common Executor])
-  (:use [org.apache.storm.daemon common])
+  ;; (:import [org.apache.storm.daemon.common Executor])
+  ;; (:use [org.apache.storm.daemon common])
   (:use [org.apache.storm log util])
   (:use [clojure.math.numeric-tower :only [ceil]]))
 
@@ -1029,7 +1029,7 @@
    window
    include-sys?
    last-err-fn]
-  (let [exec-id->node+port (map (fn [[^Executor e node+port] ] [[(:start-task-id e) (:last-task-id e)] node+port]) exec->node+port)] ;;hudie modify
+  (let [exec-id->node+port (map (fn [[e node+port] ] [[(:start-task-id e) (:last-task-id e)] node+port]) exec->node+port)] ;;hudie modify
     (->> ;; This iterates over each executor one time, because of lazy evaluation.
       (extract-data-from-hb exec-id->node+port              ;;hudie modify
                             task->component
@@ -1332,7 +1332,7 @@
    topology-id
    topology
    component-id]
-  (let [exec-id->host+port (map (fn [[^Executor e node+port]] [[(:start-task-id e) (:last-task-id e)] node+port]) exec->host+port)] ;; hudie modify
+  (let [exec-id->host+port (map (fn [[ e node+port]] [[(:start-task-id e) (:last-task-id e)] node+port]) exec->host+port)] ;; hudie modify
     (->> ;; This iterates over each executor one time, because of lazy evaluation.
       (extract-data-from-hb exec-id->host+port              ;; hudie modify
                             task->component
