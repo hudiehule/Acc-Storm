@@ -761,10 +761,7 @@
         
         (log-message "Preparing bolt " component-id ":" (keys task-datas))
         (doseq [[task-id task-data] task-datas
-                :let [bolt-obj (:object task-data)          ;; hudie modify
-                      bolt-obj (if (:is-acc-executor task-data) ;; hudie add
-                                 (IAccBolt bolt-obj)
-                                 (IBolt bolt-obj))
+                :let [^IBolt bolt-obj (:object task-data)   ;; hudie modify
                       tasks-fn (:tasks-fn task-data)
                       user-context (:user-context task-data)
                       bolt-emit (fn [stream anchors values task]
@@ -781,12 +778,12 @@
                                                                             (fast-list-iter [root-id root-ids]
                                                                                             (put-xor! anchors-to-ids root-id edge-id))
                                                                             ))))
-                                                        (let [tuple (TupleImpl. worker-context
-                                                                               values
-                                                                               task-id
-                                                                               stream
-                                                                               (MessageId/makeId anchors-to-ids))]
-                                                          (transfer-fn t tuple))))
+                                                      (let [tuple (TupleImpl. worker-context
+                                                                              values
+                                                                              task-id
+                                                                              stream
+                                                                              (MessageId/makeId anchors-to-ids))]
+                                                        (transfer-fn t tuple))))
                                     (if has-eventloggers?
                                       (send-to-eventlogger executor-data task-data values component-id nil rand))
                                     (or out-tasks [])))]]
