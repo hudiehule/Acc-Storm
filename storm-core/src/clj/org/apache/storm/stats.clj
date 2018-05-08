@@ -24,7 +24,8 @@
                                        ExecutorAggregateStats SpecificAggregateStats
                                        SpoutAggregateStats TopologyPageInfo TopologyStats Bolt])
   (:import [org.apache.storm.utils Utils])
-  (:import [org.apache.storm.metric.internal MultiCountStatAndMetric MultiLatencyStatAndMetric])
+  (:import [org.apache.storm.metric.internal MultiCountStatAndMetric MultiLatencyStatAndMetric]
+           (org.apache.storm.daemon.common Executor))
   (:use [org.apache.storm log util])
   (:use [clojure.math.numeric-tower :only [ceil]]))
 
@@ -829,8 +830,8 @@
       (.containsKey spouts id) :spout)))
 
 (defn extract-nodeinfos-from-hb-for-comp
-  ([exec->host+port task->component include-sys? comp-id]
-   (distinct (for [[[start end :as executor] [host port]] exec->host+port
+  ([exec-id->host+port task->component include-sys? comp-id]
+   (distinct (for [[[start end :as executor] [host port]] exec-id->host+port
          :let [id (task->component start)]
          :when (and (or (nil? comp-id) (= comp-id id))
                  (or include-sys? (not (Utils/isSystemId id))))]
@@ -838,8 +839,8 @@
       :port port}))))
 
 (defn extract-data-from-hb
-  ([exec->host+port task->component beats include-sys? topology comp-id]
-   (for [[[start end :as executor] [host port]] exec->host+port
+  ([exec-id->host+port task->component beats include-sys? topology comp-id] ;;hudie modify
+   (for [[[start end :as executor] [host port]] exec-id->host+port ;;hudie modify
          :let [beat (beats executor)
                id (task->component start)]
          :when (and (or (nil? comp-id) (= comp-id id))
@@ -853,8 +854,8 @@
       :stats (:stats beat)
       :type (or (:type (:stats beat))
                 (component-type topology id))}))
-  ([exec->host+port task->component beats include-sys? topology]
-    (extract-data-from-hb exec->host+port
+  ([exec-id->host+port task->component beats include-sys? topology] ;; hudie modify
+    (extract-data-from-hb exec-id->host+port                ;; hudie modify
                           task->component
                           beats
                           include-sys?
@@ -1027,15 +1028,17 @@
    window
    include-sys?
    last-err-fn]
-  (->> ;; This iterates over each executor one time, because of lazy evaluation.
-    (extract-data-from-hb exec->node+port
-                          task->component
-                          beats
-                          include-sys?
-                          topology)
-    (aggregate-topo-stats window include-sys?)
-    (post-aggregate-topo-stats task->component exec->node+port last-err-fn)
-    (thriftify-topo-page-data topology-id)))
+  (let [exec-id->node+port (map (fn [[^Executor e node+port] ] [[(:start-task-id e) (:last-task-id e)] node+port]) exec->node+port)] ;;hudie modify
+    (->> ;; This iterates over each executor one time, because of lazy evaluation.
+      (extract-data-from-hb exec-id->node+port              ;;hudie modify
+                            task->component
+                            beats
+                            include-sys?
+                            topology)
+      (aggregate-topo-stats window include-sys?)
+      (post-aggregate-topo-stats task->component exec-id->node+port last-err-fn) ;;hudie modify
+      (thriftify-topo-page-data topology-id))
+    ))
 
 (defn- agg-bolt-exec-win-stats
   "A helper function that aggregates windowed stats from one bolt executor."
@@ -1328,16 +1331,17 @@
    topology-id
    topology
    component-id]
-  (->> ;; This iterates over each executor one time, because of lazy evaluation.
-    (extract-data-from-hb exec->host+port
-                          task->component
-                          beats
-                          include-sys?
-                          topology
-                          component-id)
-    (aggregate-comp-stats window include-sys?)
-    (post-aggregate-comp-stats task->component exec->host+port)
-    (thriftify-comp-page-data topology-id topology component-id)))
+  (let [exec-id->host+port (map (fn [[^Executor e node+port]] [[(:start-task-id e) (:last-task-id e)] node+port]) exec->host+port)] ;; hudie modify
+    (->> ;; This iterates over each executor one time, because of lazy evaluation.
+      (extract-data-from-hb exec-id->host+port              ;; hudie modify
+                            task->component
+                            beats
+                            include-sys?
+                            topology
+                            component-id)
+      (aggregate-comp-stats window include-sys?)
+      (post-aggregate-comp-stats task->component exec-id->host+port) ;; hudie modify
+      (thriftify-comp-page-data topology-id topology component-id))))
 
 (defn expand-averages
   [avg counts]

@@ -761,10 +761,10 @@
         
         (log-message "Preparing bolt " component-id ":" (keys task-datas))
         (doseq [[task-id task-data] task-datas
-                :let [bolt-obj (:object task-data)
-                      bolt-obj (if (:is-acc-executor task-data)
-                                 (^IAccBolt bolt-obj)
-                                 (^IBolt bolt-obj))
+                :let [bolt-obj (:object task-data)          ;; hudie modify
+                      bolt-obj (if (:is-acc-executor task-data) ;; hudie add
+                                 (IAccBolt bolt-obj)
+                                 (IBolt bolt-obj))
                       tasks-fn (:tasks-fn task-data)
                       user-context (:user-context task-data)
                       bolt-emit (fn [stream anchors values task]

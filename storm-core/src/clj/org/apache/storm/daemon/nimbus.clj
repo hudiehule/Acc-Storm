@@ -1675,7 +1675,7 @@
               executor->host+port (map-val (fn [[node port]]
                                              [(node->host node) port])
                                     executor->node+port)
-              nodeinfos (stats/extract-nodeinfos-from-hb-for-comp executor->host+port task->component false component_id)
+              nodeinfos (stats/extract-nodeinfos-from-hb-for-comp (map-key (fn [^Executor e] [(:start-task-id e) (:last-task-id e)]) executor->host+port) task->component false component_id)
               all-pending-actions-for-topology (.get-topology-profile-requests storm-cluster-state id true)
               latest-profile-actions (remove nil? (map (fn [nodeInfo]
                                                          (->> all-pending-actions-for-topology
@@ -1922,13 +1922,14 @@
                           (into {}))
               executor-summaries (dofor [[^Executor executor [node port]] (:executor->node+port assignment)]
                                         (let [host (-> assignment :node->host (get node))
-                                              heartbeat (get beats executor)
+                                              executor-id [(:start-task-id executor) (:last-task-id executor)] ;;hudie add
+                                              heartbeat (get beats executor-id) ;;hudie modify
                                               stats (:stats heartbeat)
                                               stats (if stats
                                                       (stats/thriftify-executor-stats stats))]
                                           (doto
                                               (ExecutorSummary. (thriftify-executor-id executor)
-                                                                (-> executor first task->component)
+                                                                (-> executor-id first task->component) ;;hudie modify
                                                                 host
                                                                 port
                                                                 (nil-to-zero (:uptime heartbeat)))
@@ -2198,10 +2199,10 @@
                     task-index (mod (TupleUtils/listHashCode [component-id])
                                     (count eventlogger-tasks))
                     task-id (nth eventlogger-tasks task-index)
-                    eventlogger-exec (first (filter (fn [[start stop]]
-                                                      (between? task-id start stop))
+                    eventlogger-exec (first (filter (fn [^Executor executor]
+                                                      (between? task-id (:start-task-id executor) (:last-task-id executor)))
                                                     (keys executor->host+port)))
-                    [host port] (get executor->host+port eventlogger-exec)]
+                    [host port] (get (map-key (fn [^Executor e] [(:start-task-id e) (:last-task-id e)]) executor->host+port) eventlogger-exec)]
                 (if (and host port)
                   (doto comp-page-info
                     (.set_eventlog_host host)
