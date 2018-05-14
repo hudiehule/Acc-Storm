@@ -840,9 +840,9 @@
       :port port}))))
 
 (defn extract-data-from-hb
-  ([exec-id->host+port task->component beats include-sys? topology comp-id] ;;hudie modify
+  ([exec-id->host+port task->component executor-id->beat include-sys? topology comp-id] ;;hudie modify
    (for [[[start end :as executor] [host port]] exec-id->host+port ;;hudie modify
-         :let [beat (beats executor)
+         :let [beat (executor-id->beat executor)            ;; hudie modify
                id (task->component start)]
          :when (and (or (nil? comp-id) (= comp-id id))
                     (or include-sys? (not (Utils/isSystemId id))))]
@@ -855,10 +855,10 @@
       :stats (:stats beat)
       :type (or (:type (:stats beat))
                 (component-type topology id))}))
-  ([exec-id->host+port task->component beats include-sys? topology] ;; hudie modify
+  ([exec-id->host+port task->component executor-id->beat include-sys? topology] ;; hudie modify
     (extract-data-from-hb exec-id->host+port                ;; hudie modify
                           task->component
-                          beats
+                          executor-id->beat                 ;; hudie modify
                           include-sys?
                           topology
                           nil)))
@@ -1029,11 +1029,12 @@
    window
    include-sys?
    last-err-fn]
-  (let [exec-id->node+port (map (fn [[e node+port] ] [[(:start-task-id e) (:last-task-id e)] node+port]) exec->node+port)] ;;hudie modify
+  (let [exec-id->node+port (map (fn [[e node+port] ] [[(:start-task-id e) (:last-task-id e)] node+port]) exec->node+port)
+        executor-id->beat (map-key #([(:start-task-id %) (:last-task-id %)]) beats)] ;;hudie modify
     (->> ;; This iterates over each executor one time, because of lazy evaluation.
       (extract-data-from-hb exec-id->node+port              ;;hudie modify
                             task->component
-                            beats
+                            executor-id->beat
                             include-sys?
                             topology)
       (aggregate-topo-stats window include-sys?)
@@ -1332,11 +1333,12 @@
    topology-id
    topology
    component-id]
-  (let [exec-id->host+port (map (fn [[ e node+port]] [[(:start-task-id e) (:last-task-id e)] node+port]) exec->host+port)] ;; hudie modify
+  (let [exec-id->host+port (map (fn [[ e node+port]] [[(:start-task-id e) (:last-task-id e)] node+port]) exec->host+port) hudie modify
+        executor-id->beat (map-key #([(:start-task-id %) (:last-task-id %)]) beats)] ;; hudie modify
     (->> ;; This iterates over each executor one time, because of lazy evaluation.
       (extract-data-from-hb exec-id->host+port              ;; hudie modify
                             task->component
-                            beats
+                            executor-id->beat               ;;hudie modify
                             include-sys?
                             topology
                             component-id)

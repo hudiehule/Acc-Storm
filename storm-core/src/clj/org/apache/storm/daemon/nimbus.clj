@@ -590,7 +590,7 @@
 (defn update-heartbeats! [nimbus storm-id all-executors existing-assignment]
   (log-debug "Updating heartbeats for " storm-id " " (pr-str all-executors))
   (let [storm-cluster-state (:storm-cluster-state nimbus)
-        executor-beats (.executor-beats storm-cluster-state storm-id (:executor->node+port existing-assignment))
+        executor-beats (.executor-beats storm-cluster-state storm-id (:executor->node+port existing-assignment)) ;; 一个map,{<Executor,executor-beat>} executor-beat: {:time-secs :uptime :stats}
         cache (update-heartbeat-cache (@(:heartbeats-cache nimbus) storm-id)
                                       executor-beats
                                       all-executors
@@ -1413,7 +1413,7 @@
                                        (NotAliveException. (str storm-id))))
                   assignment (.assignment-info storm-cluster-state storm-id nil)
                   beats (map-val :heartbeat (get @(:heartbeats-cache nimbus)
-                                                 storm-id))
+                                                 storm-id)) ;;beats是一个map {<Executor, executor-heartbeat>}
                   all-components (set (vals task->component))
                   general-components (set (keys (general-components topology)))
                   acc-components (set (keys (acc-components topology)))]
@@ -1922,8 +1922,8 @@
                           (into {}))
               executor-summaries (dofor [[^Executor executor [node port]] (:executor->node+port assignment)]
                                         (let [host (-> assignment :node->host (get node))
-                                              executor-id [(:start-task-id executor) (:last-task-id executor)] ;;hudie add
-                                              heartbeat (get beats executor-id) ;;hudie modify
+                                              ;;  executor-id [(:start-task-id executor) (:last-task-id executor)] ;;hudie add
+                                              heartbeat (get beats executor) ;;hudie modify
                                               stats (:stats heartbeat)
                                               stats (if stats
                                                       (stats/thriftify-executor-stats stats))]

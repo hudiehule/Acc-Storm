@@ -128,7 +128,7 @@
   (str "[" (.get_task_start e) "-" (.get_task_end e) "-" (if-let [is-acc-executor (.is_isAccExecutor e)]
                                                                "accComponentExecutor"
                                                                "generelComponentExecutor") "]"))
-(defn assigned-executor-type-form-info [^ExecutorInfo e]
+(defn assigned-executor-type-from-info [^ExecutorInfo e]
   (if-let [is-assigned-acc-executor (.is_isAssignedAccExecutor e)]
     "assignedAccExecutor"
     "assignedGeneralExecutor")
