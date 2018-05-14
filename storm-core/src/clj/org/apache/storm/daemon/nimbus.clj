@@ -1922,7 +1922,7 @@
                           (into {}))
               executor-summaries (dofor [[^Executor executor [node port]] (:executor->node+port assignment)]
                                         (let [host (-> assignment :node->host (get node))
-                                              ;;  executor-id [(:start-task-id executor) (:last-task-id executor)] ;;hudie add
+                                              executor-id [(:start-task-id executor) (:last-task-id executor)] ;;hudie add
                                               heartbeat (get beats executor) ;;hudie modify
                                               stats (:stats heartbeat)
                                               stats (if stats
