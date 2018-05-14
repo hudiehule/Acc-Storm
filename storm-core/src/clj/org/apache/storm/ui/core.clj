@@ -749,7 +749,7 @@
         host (.get_host summ)
         port (.get_port summ)
         exec-id (pretty-executor-info info)
-        assigned-executor-type (assigned-executor-type-form-info info)
+        assigned-executor-type (assigned-executor-type-from-info info)
         uptime (.get_uptime_secs summ)]
     {"id" exec-id
      "assignedExecutorType" assigned-executor-type
