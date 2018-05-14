@@ -614,8 +614,8 @@
   ;; don't just rely on heartbeat being the same
   (let [conf (:conf nimbus)
         storm-id (.getId topology-details)
-        executor-start-times (:executor->start-time-secs existing-assignment)
-        heartbeats-cache (@(:heartbeats-cache nimbus) storm-id)]
+        executor-start-times (map-key (fn [^Executor e] [(:start-task-id e) (:last-task-id e)]) (:executor->start-time-secs existing-assignment))
+        heartbeats-cache (map-key (fn [^Executor e] [(:start-task-id e) (:last-task-id e)]) (@(:heartbeats-cache nimbus) storm-id)) ]
     (->> all-executors
         (filter (fn [executor]
           (let [start-time (get executor-start-times executor)
@@ -880,8 +880,8 @@
     (.getAssignments cluster)))
 
 (defn changed-executors [executor->node+port new-executor->node+port]
-  (let [executor->node+port (if executor->node+port (sort #(compare (first (first %1))  (first (first %2))) executor->node+port) nil)
-        new-executor->node+port (if new-executor->node+port (sort #(compare (first (first %1))  (first (first %2))) new-executor->node+port) nil)
+  (let [executor->node+port (if executor->node+port (sort #(compare (first (key %1))  (first (key %2))) executor->node+port) nil)
+        new-executor->node+port (if new-executor->node+port (sort #(compare (first (key %1))  (first (key %2))) new-executor->node+port) nil)
         slot-assigned (reverse-map executor->node+port)
         new-slot-assigned (reverse-map new-executor->node+port)
         brand-new-slots (map-diff slot-assigned new-slot-assigned)]

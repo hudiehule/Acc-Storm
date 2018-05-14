@@ -152,7 +152,9 @@
         spouts (.get_spouts topology)
         bolts (.get_bolts topology)]
     (cond (contains? spouts component-id) :spout
-          (contains? bolts component-id) :bolt
+          (contains? bolts component-id) (if-let [is-acc-executor (:is-acc-executor executor)]
+                                                   :accBolt
+                                                   :bolt)
           :else (throw-runtime "Could not find " component-id " in topology " topology))))
 
 (defn executor-selector [executor-data & _] (:type executor-data))
@@ -725,7 +727,7 @@
                                     (.setCredentials bolt-obj (.getValue tuple 0))))
                               Constants/METRICS_TICK_STREAM_ID (metrics-tick executor-data (get task-datas task-id) tuple)
                               (let [task-data (get task-datas task-id)
-                                    bolt-obj (:object task-data)
+                                    ^IBolt bolt-obj (:object task-data)
                                     user-context (:user-context task-data)
                                     sampler? (sampler)
                                     execute-sampler? (execute-sampler)
@@ -734,11 +736,7 @@
                                   (.setProcessSampleStartTime tuple now))
                                 (when execute-sampler?
                                   (.setExecuteSampleStartTime tuple now))
-                                (if-let [is-acc-task (:is-acc-executor task-data)] ;;判断task是不是一个acc-executor的task 如果是 则需要执行accExecute方法 否则执行execute方法
-                                  (.accExecute ^IAccBolt bolt-obj tuple)
-                                    ;;   (log-message "accExecute method")
-
-                                     (.execute ^IBolt bolt-obj tuple))
+                                (.execute bolt-obj tuple)
                                 (let [delta (tuple-execute-time-delta! tuple)]
                                   (when debug?
                                     (log-message "Execute done TUPLE " tuple " TASK: " task-id " DELTA: " delta))
