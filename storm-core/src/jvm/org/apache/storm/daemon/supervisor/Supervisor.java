@@ -239,7 +239,7 @@ public class Supervisor implements DaemonCommon, AutoCloseable {
         if((Boolean)conf.get(Config.SUPERVISOR_OCL_ENABLE)){
             // get the nativeServer's port
             LOG.info("Starting the deviceManager");
-            int port = Utils.getInt(conf.get(Config.SUPERVISOR_OCL_NATIVE_PORT));
+            int port = Utils.getInt(conf.get(Config.OCL_NATIVE_PORT));
             this.deviceManager = new DeviceManager(this,port);
         }
 

@@ -28,7 +28,7 @@
   (:import [org.apache.storm.grouping CustomStreamGrouping])
   (:import [org.apache.storm.task WorkerTopologyContext IBolt OutputCollector IOutputCollector])
   (:import [org.apache.storm.generated GlobalStreamId Bolt])
-  (:import [org.apache.storm.topology IAccBolt])
+  (:import [org.apache.storm.topology.accelerate IAccBolt])
   (:import [org.apache.storm.utils Utils TupleUtils MutableObject RotatingMap RotatingMap$ExpiredCallback MutableLong Time DisruptorQueue WorkerBackpressureThread])
   (:import [com.lmax.disruptor InsufficientCapacityException])
   (:import [org.apache.storm.serialization KryoTupleSerializer])
@@ -181,6 +181,7 @@
                         TOPOLOGY-BOLTS-MESSAGE-ID-FIELD-NAME
                         TOPOLOGY-STATE-PROVIDER
                         TOPOLOGY-STATE-PROVIDER-CONFIG
+                        OCL-NATIVE-PORT                     ;;hudie  add
                         )
         spec-conf (-> general-context
                       (.getComponentCommon component-id)
@@ -861,6 +862,173 @@
       :factory? true
       :thread-name (str component-id "-executor" (:executor-id executor-data)))]))
 
+(defmethod mk-threads :accBolt [executor-data task-datas initial-credentials]
+  (let [{:keys [storm-conf component-id worker-context transfer-fn report-error sampler
+                open-or-prepare-was-called?]} executor-data
+        execute-sampler (mk-stats-sampler storm-conf)
+        executor-stats (:stats executor-data)
+        rand (Random. (Utils/secureRandomLong))
+        debug? (= true (storm-conf TOPOLOGY-DEBUG))
+
+        tuple-action-fn (fn [task-id ^TupleImpl tuple]
+                          ;; synchronization needs to be done with a key provided by this bolt, otherwise:
+                          ;; spout 1 sends synchronization (s1), dies, same spout restarts somewhere else, sends synchronization (s2) and incremental update. s2 and update finish before s1 -> lose the incremental update
+                          ;; TODO: for state sync, need to first send sync messages in a loop and receive tuples until synchronization
+                          ;; buffer other tuples until fully synchronized, then process all of those tuples
+                          ;; then go into normal loop
+                          ;; spill to disk?
+                          ;; could be receiving incremental updates while waiting for sync or even a partial sync because of another failed task
+                          ;; should remember sync requests and include a random sync id in the request. drop anything not related to active sync requests
+                          ;; or just timeout the sync messages that are coming in until full sync is hit from that task
+                          ;; need to drop incremental updates from tasks where waiting for sync. otherwise, buffer the incremental updates
+                          ;; TODO: for state sync, need to check if tuple comes from state spout. if so, update state
+                          ;; TODO: how to handle incremental updates as well as synchronizations at same time
+                          ;; TODO: need to version tuples somehow
+
+                          ;;(log-debug "Received tuple " tuple " at task " task-id)
+                          ;; need to do it this way to avoid reflection
+                          (let [stream-id (.getSourceStreamId tuple)]
+                            (condp = stream-id
+                              Constants/CREDENTIALS_CHANGED_STREAM_ID
+                              (let [task-data (get task-datas task-id)
+                                    bolt-obj (:object task-data)]
+                                (when (instance? ICredentialsListener bolt-obj)
+                                  (.setCredentials bolt-obj (.getValue tuple 0))))
+                              Constants/METRICS_TICK_STREAM_ID (metrics-tick executor-data (get task-datas task-id) tuple)
+                              (let [task-data (get task-datas task-id)
+                                    ^IAccBolt bolt-obj (:object task-data)
+                                    user-context (:user-context task-data)
+                                    sampler? (sampler)
+                                    execute-sampler? (execute-sampler)
+                                    now (if (or sampler? execute-sampler?) (System/currentTimeMillis))]
+                                (when sampler?
+                                  (.setProcessSampleStartTime tuple now))
+                                (when execute-sampler?
+                                  (.setExecuteSampleStartTime tuple now))
+                                (.accExecute bolt-obj tuple)
+                                (let [delta (tuple-execute-time-delta! tuple)]
+                                  (when debug?
+                                    (log-message "Execute done TUPLE " tuple " TASK: " task-id " DELTA: " delta))
+
+                                  (task/apply-hooks user-context .boltExecute (BoltExecuteInfo. tuple task-id delta))
+                                  (when delta
+                                    (stats/bolt-execute-tuple! executor-stats
+                                                               (.getSourceComponent tuple)
+                                                               (.getSourceStreamId tuple)
+                                                               delta)))))))
+        has-eventloggers? (has-eventloggers? storm-conf)]
+
+    ;; TODO: can get any SubscribedState objects out of the context now
+
+    [(async-loop
+       (fn []
+         ;; If topology was started in inactive state, don't call prepare bolt until it's activated first.
+         (while (not @(:storm-active-atom executor-data))
+           (Thread/sleep 100))
+
+         (log-message "Preparing accBolt " component-id ":" (keys task-datas))
+         (doseq [[task-id task-data] task-datas
+                 :let [^IAccBolt bolt-obj (:object task-data)   ;; hudie modify
+                       tasks-fn (:tasks-fn task-data)
+                       user-context (:user-context task-data)
+                       bolt-emit (fn [stream anchors values task]
+                                   (let [out-tasks (if task
+                                                     (tasks-fn task stream values)
+                                                     (tasks-fn stream values))]
+                                     (fast-list-iter [t out-tasks]
+                                                     (let [anchors-to-ids (HashMap.)]
+                                                       (fast-list-iter [^TupleImpl a anchors]
+                                                                       (let [root-ids (-> a .getMessageId .getAnchorsToIds .keySet)]
+                                                                         (when (pos? (count root-ids))
+                                                                           (let [edge-id (MessageId/generateId rand)]
+                                                                             (.updateAckVal a edge-id)
+                                                                             (fast-list-iter [root-id root-ids]
+                                                                                             (put-xor! anchors-to-ids root-id edge-id))
+                                                                             ))))
+                                                       (let [tuple (TupleImpl. worker-context
+                                                                               values
+                                                                               task-id
+                                                                               stream
+                                                                               (MessageId/makeId anchors-to-ids))]
+                                                         (transfer-fn t tuple))))
+                                     (if has-eventloggers?
+                                       (send-to-eventlogger executor-data task-data values component-id nil rand))
+                                     (or out-tasks [])))]]
+           (builtin-metrics/register-all (:builtin-metrics task-data) storm-conf user-context)
+           (when (instance? ICredentialsListener bolt-obj) (.setCredentials bolt-obj initial-credentials))
+           (if (= component-id Constants/SYSTEM_COMPONENT_ID)
+             (do
+               (builtin-metrics/register-queue-metrics {:sendqueue (:batch-transfer-queue executor-data)
+                                                        :receive (:receive-queue executor-data)
+                                                        :transfer (:transfer-queue (:worker executor-data))}
+                                                       storm-conf user-context)
+               (builtin-metrics/register-iconnection-client-metrics (:cached-node+port->socket (:worker executor-data)) storm-conf user-context)
+               (builtin-metrics/register-iconnection-server-metric (:receiver (:worker executor-data)) storm-conf user-context))
+             (builtin-metrics/register-queue-metrics {:sendqueue (:batch-transfer-queue executor-data)
+                                                      :receive (:receive-queue executor-data)}
+                                                     storm-conf user-context)
+             )
+
+           (.accPrepare bolt-obj
+                     storm-conf
+                     user-context
+                     (OutputCollector.
+                       (reify IOutputCollector
+                         (emit [this stream anchors values]
+                           (bolt-emit stream anchors values nil))
+                         (emitDirect [this task stream anchors values]
+                           (bolt-emit stream anchors values task))
+                         (^void ack [this ^Tuple tuple]
+                           (let [^TupleImpl tuple tuple
+                                 ack-val (.getAckVal tuple)]
+                             (fast-map-iter [[root id] (.. tuple getMessageId getAnchorsToIds)]
+                                            (task/send-unanchored task-data
+                                                                  ACKER-ACK-STREAM-ID
+                                                                  [root (bit-xor id ack-val)])))
+                           (let [delta (tuple-time-delta! tuple)]
+                             (when debug?
+                               (log-message "BOLT ack TASK: " task-id " TIME: " delta " TUPLE: " tuple))
+                             (task/apply-hooks user-context .boltAck (BoltAckInfo. tuple task-id delta))
+                             (when delta
+                               (stats/bolt-acked-tuple! executor-stats
+                                                        (.getSourceComponent tuple)
+                                                        (.getSourceStreamId tuple)
+                                                        delta))))
+                         (^void fail [this ^Tuple tuple]
+                           (fast-list-iter [root (.. tuple getMessageId getAnchors)]
+                                           (task/send-unanchored task-data
+                                                                 ACKER-FAIL-STREAM-ID
+                                                                 [root]))
+                           (let [delta (tuple-time-delta! tuple)
+                                 debug? (= true (storm-conf TOPOLOGY-DEBUG))]
+                             (when debug?
+                               (log-message "BOLT fail TASK: " task-id " TIME: " delta " TUPLE: " tuple))
+                             (task/apply-hooks user-context .boltFail (BoltFailInfo. tuple task-id delta))
+                             (when delta
+                               (stats/bolt-failed-tuple! executor-stats
+                                                         (.getSourceComponent tuple)
+                                                         (.getSourceStreamId tuple)
+                                                         delta))))
+                         (^void resetTimeout [this ^Tuple tuple]
+                           (fast-list-iter [root (.. tuple getMessageId getAnchors)]
+                                           (task/send-unanchored task-data
+                                                                 ACKER-RESET-TIMEOUT-STREAM-ID
+                                                                 [root])))
+                         (reportError [this error]
+                           (report-error error)
+                           )))))
+         (reset! open-or-prepare-was-called? true)
+         (log-message "Prepared bolt " component-id ":" (keys task-datas))
+         (setup-metrics! executor-data)
+
+         (let [receive-queue (:receive-queue executor-data)
+               event-handler (mk-task-receiver executor-data tuple-action-fn)]
+           (fn []
+             (disruptor/consume-batch-when-available receive-queue event-handler)
+             0)))
+       :kill-fn (:report-error-and-die executor-data)
+       :factory? true
+       :thread-name (str component-id "-executor" (:executor-id executor-data)))]))
 
 (defmethod close-component :spout [executor-data spout]
   (.close spout))

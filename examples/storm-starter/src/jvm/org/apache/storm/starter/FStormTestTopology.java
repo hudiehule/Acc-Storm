@@ -1,20 +1,16 @@
 package org.apache.storm.starter;
 
-import com.google.protobuf.ByteString;
-import com.sun.org.apache.bcel.internal.util.ClassPath;
-import org.apache.commons.exec.ExecuteException;
+
 import org.apache.storm.Config;
 import org.apache.storm.StormSubmitter;
 import org.apache.storm.generated.KillOptions;
 import org.apache.storm.generated.Nimbus;
-import org.apache.storm.generated.StormTopology;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 
 import org.apache.storm.topology.*;
-import org.apache.storm.topology.base.BaseAccBolt;
-import org.apache.storm.topology.base.BaseRichBolt;
+import org.apache.storm.topology.accelerate.BaseRichAccBolt;
 import org.apache.storm.topology.base.BaseRichSpout;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
@@ -72,12 +68,13 @@ public class FStormTestTopology {
     }
 
 
-    public static class MapBolt extends BaseAccBolt {
-
-        public MapBolt(Class[] tupleEleTypes,int batchSize){
-            super(tupleEleTypes,batchSize);
+    public static class MapBolt extends BaseRichAccBolt {
+        private OutputCollector collector;
+        public MapBolt(Class[] inputTupleEleTypes,Class[] outputTupleEleTypes,int batchSize,String kernelName){
+            super(inputTupleEleTypes,outputTupleEleTypes,batchSize,kernelName);
         }
-        public void prepare(Map stormConf, TopologyContext context){
+        public void prepare(Map stormConf, TopologyContext context,OutputCollector collector){
+              this.collector = collector;
               System.out.println("Acc bolt preparation");
         }
         @Override
@@ -85,7 +82,7 @@ public class FStormTestTopology {
              return new Class[1];
         }
         @Override
-        public void execute(Tuple tuple,BasicOutputCollector collector){
+        public void execute(Tuple tuple){
          //用户执行逻辑 当这个组件不能在FPGA或者GPU上运行时 则还是放在CPU上运行  相应的在kernelFile中也有一种实现
             collector.emit(new Values("send"));
         }
@@ -101,7 +98,7 @@ public class FStormTestTopology {
         TopologyBuilder builder = new TopologyBuilder();
 
         builder.setSpout("spout",new DataSpout(),1);
-        builder.setAccBolt("accbolt",new MapBolt(new Class[]{Integer.class},100)).shuffleGrouping("spout");
+        builder.setAccBolt("accbolt",new MapBolt(new Class[]{float.class,float.class}, new Class[]{float.class},1000,"multKernel")).shuffleGrouping("spout");
 
         Config conf = new Config();
         conf.setNumWorkers(2);
@@ -114,7 +111,7 @@ public class FStormTestTopology {
                         "    int gid = get_global_id(0);"+
                         "    c[gid] = a[gid] * b[gid];"+
                         "}";
-        builder.setTopologyKernelFile(kernel, KernelFileArgumentType.FILESTRING);//设置kernel本地文件的路径
+        builder.setTopologyKernelFile(kernel, KernelFileArgumentType.FILESTRING);//设置kernel本地可执行文件的路径 这个kernel必须是事先编译好的 提供kernel名称就可以了 去找
         String name = "FStormTestTopology"; //拓扑名称
 
         StormSubmitter.submitTopology(name,conf,builder.createTopology());

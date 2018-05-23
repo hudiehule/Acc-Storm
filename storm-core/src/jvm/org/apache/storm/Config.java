@@ -1379,7 +1379,7 @@ public class Config extends HashMap<String, Object> {
 
     @isInteger
     @isPositiveNumber
-    public static final String SUPERVISOR_OCL_NATIVE_PORT = "supervisor.ocl.native.port";
+    public static final String OCL_NATIVE_PORT = "ocl.native.port";
     /**
      * how often the supervisor sends a heartbeat to the master.
      */

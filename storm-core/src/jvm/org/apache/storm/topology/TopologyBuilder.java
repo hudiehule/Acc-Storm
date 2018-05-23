@@ -26,7 +26,8 @@ import org.apache.storm.spout.CheckpointSpout;
 import org.apache.storm.state.State;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
-import org.apache.storm.topology.base.BaseAccBolt;
+import org.apache.storm.topology.accelerate.BaseRichAccBolt;
+import org.apache.storm.topology.accelerate.IAccBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.utils.Utils;
@@ -239,12 +240,12 @@ public class TopologyBuilder {
      * @return use the returned object to declare the inputs to this component
      * @throws IllegalArgumentException
      */
-    public BoltDeclarer setAccBolt(String id, BaseAccBolt bolt, Number parallelism_hint) throws IllegalArgumentException {
+    public BoltDeclarer setAccBolt(String id, BaseRichAccBolt bolt, Number parallelism_hint) throws IllegalArgumentException {
         _accBolts.put(id,bolt);
         return setAccBolt(id,new AccBoltExecutor(bolt),parallelism_hint);
     }
 
-    public BoltDeclarer setAccBolt(String id, BaseAccBolt bolt) throws IllegalArgumentException {
+    public BoltDeclarer setAccBolt(String id, BaseRichAccBolt bolt) throws IllegalArgumentException {
         _accBolts.put(id,bolt);
         return setAccBolt(id,new AccBoltExecutor(bolt),1);
     }
