@@ -23,40 +23,14 @@ public class NativeBufferManager {
         }
     }
 
-    public void crateSharedMemory(int size,int[] inputShmKeys,String[] inputTupleEleTypes, int[] outputShmKeys,String[] outputTupleEleTypes){
-        int inputShmNum = inputShmKeys.length;
-        int outputShmNum = outputShmKeys.length;
+    public void crateSharedMemory(int size,String[] inputTupleEleTypes,String[] outputTupleEleTypes){
+        int inputShmNum = inputTupleEleTypes.length;
+        int outputShmNum = outputTupleEleTypes.length;
         for(int i = 0; i<inputShmNum;i++){
-            inputShmid[i] = shmGet(size,inputShmKeys[i],inputTupleEleTypes[i]);
-            /*switch(inputTupleEleTypes[i]){
-                case "int":{
-                    inputShmid[i] = shmGet(size,inputShmKeys[i],"int");
-                }
-                case "boolean":{
-                    inputShmid[i] = shmGet(size,inputShmKeys[i],"int");
-                }
-                case "byte": {
-                    inputShmid[i] = shmGet(size,inputShmKeys[i],"int");
-                }
-                case "short": {
-                    inputShmid[i] = shmGet(size,inputShmKeys[i],"int");
-                }
-                case "float": {
-                    inputShmid[i] = shmGet(size,inputShmKeys[i],"int");
-                }
-                case "double": {
-                    inputShmid[i] = shmGet(size,inputShmKeys[i],"int");
-                }
-                case "long": {
-                    inputShmid[i] = shmGet(size,inputShmKeys[i],"int");
-                }
-                case "char": {
-                    inputShmid[i] = shmGet(size,inputShmKeys[i],"int");
-                }
-            }*/
+            inputShmid[i] = shmGet(size,inputTupleEleTypes[i]);
         }
         for(int i = 0;i<outputShmNum;i++){
-            outputShmid[i] = shmGet(size,outputShmKeys[i],outputTupleEleTypes[i]);
+            outputShmid[i] = shmGet(size,outputTupleEleTypes[i]);
         }
       /*  inputShmid = shmGet(size,inputShmKeys,inputTupleEleTypes);
         outputShmid = shmGet(size,outputShmKeys,outputTupleEleTypes);*/
@@ -65,8 +39,16 @@ public class NativeBufferManager {
     public void clearShareMemory(){
         shmClear(inputShmid);
         shmClear(outputShmid);
+        shmClear(new int[]{1});
     }
 
+    public int[] getInputShmids(){
+        return inputShmid;
+    }
+
+    public int[] getOutputShmids(){
+        return outputShmid;
+    }
     public void pushInputTuplesFromBufferToShm(int size, TupleBuffers buffers){
         for(int i = 0; i < buffers.types.length;i++){
             switch(buffers.types[i]){
@@ -209,7 +191,7 @@ public class NativeBufferManager {
         }
     }
     // 该函数返回的是创建的共享内存标识符
-    public native int shmGet(int size,int shmKeys,String shmTypes);
+    public native int shmGet(int size,String shmTypes);
     public native void shmClear(int[] shmids);
 
     public native boolean putIntToNativeShm(int shmid, int[] data,int size);

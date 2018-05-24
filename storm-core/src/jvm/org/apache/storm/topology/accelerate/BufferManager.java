@@ -12,14 +12,14 @@ public class BufferManager {
     private TupleBuffers inputBuffer = null;
     private TupleBuffers outputBuffer = null;
     // private int[] inputBufferShmids;
-    private int[] inputBufferShmKeys; //保存每个inputBuffer对应的共享内存数组的key 需要传送给Native OpenCL Host端
-    private int[] outputBufferShmKeys;
+    private int[] inputBufferShmids; //保存每个inputBuffer对应的共享内存数组的key 需要传送给Native OpenCL Host端
+    private int[] outputBufferShmids;
     public BufferManager(TupleBuffers inputBuffer,TupleBuffers outputBuffer){
         this.inputBuffer = inputBuffer;
         this.outputBuffer = outputBuffer;
         this.nativeBufferManager = new NativeBufferManager();
-        inputBufferShmKeys = new int[inputBuffer.size];
-        outputBufferShmKeys = new int[outputBuffer.size];
+        inputBufferShmids = new int[inputBuffer.size];
+        outputBufferShmids = new int[outputBuffer.size];
         //  建立native共享内存 对input和output都要建立
         //  NativeBufferManager.shmGet(inputBuffer.size);
         initialShm();
@@ -38,8 +38,8 @@ public class BufferManager {
      * initially create the shared memory
      */
     private void initialShm(){
-        generateShmKeys(inputBufferShmKeys,outputBufferShmKeys);
-        nativeBufferManager.crateSharedMemory(inputBuffer.size,inputBufferShmKeys,inputBuffer.types,outputBufferShmKeys,outputBuffer.types);
+       // generateShmKeys(inputBufferShmKeys,outputBufferShmKeys);
+        nativeBufferManager.crateSharedMemory(inputBuffer.size,inputBuffer.types,outputBuffer.types);
     }
 
     public void clearShm(){
@@ -49,11 +49,11 @@ public class BufferManager {
         return inputBuffer.isFull();
     }
 
-    public int[] getInputBufferShmKeys(){
-        return inputBufferShmKeys;
+    public int[] getInputBufferShmids(){
+        return nativeBufferManager.getInputShmids();
     }
-    public int[] getOutputBufferShmKeys(){
-        return outputBufferShmKeys;
+    public int[] getOutputBufferShmids(){
+        return nativeBufferManager.getOutputShmids();
     }
     public void putInputTupleToBuffer(Tuple tuple){
          List<Object> tupleElements = tuple.getValues();

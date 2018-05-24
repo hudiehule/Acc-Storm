@@ -14,7 +14,7 @@ extern "C" {
  * Signature: (IILjava/lang/String;)I
  */
 JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_shmGet
-  (JNIEnv *, jobject, jint, jint, jstring);
+  (JNIEnv *, jobject, jint, jstring);
 
 
 /*

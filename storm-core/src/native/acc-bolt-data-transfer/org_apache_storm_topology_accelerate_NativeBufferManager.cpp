@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/shm.h>
+#include <sys/ipc.h>
+#include <sys/types.h>
 #include "org_apache_storm_topology_accelerate_NativeBufferManager.h"
 
 const char* INTTYPE = "int";
@@ -21,7 +23,7 @@ const char* BOOLEANTYPE = "boolean";
  * Signature: (IILjava/lang/String;)I
  */
 JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_shmGet
-  (JNIEnv * env, jobject obj, jint size, jint shmKey, jstring data_type){
+  (JNIEnv * env, jobject obj, jint size, jstring data_type){
          int data_type_size=0;
          const char *data_type_str;
          data_type_str = (const char *)env->GetStringUTFChars(data_type,NULL);
@@ -41,7 +43,7 @@ JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
               fprintf(stderr,"data_type is invalid\n");
               exit(EXIT_FAILURE);
          }
-         jint shmid = shmget((key_t)shmKey,data_type_size * size,0666|IPC_CREAT);
+         jint shmid = shmget(IPC_PRIVATE,data_type_size * size,0666|IPC_CREAT);
          if(shmid == -1){
             fprintf(stderr,"shmget failed\n");
             exit(EXIT_FAILURE);
