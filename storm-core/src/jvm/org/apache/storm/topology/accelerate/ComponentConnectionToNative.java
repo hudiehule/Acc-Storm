@@ -44,10 +44,23 @@ public class ComponentConnectionToNative {
         serializeAndSendString("cleanupOpenCL_"+exeKernelFile+"_"+kernelFunctionName);
     }
 
-    public void startKernel(String exeKernelFile,String kernelFunctionName,int batchSize,int[] shmKeys){
+    /**
+     * send a request to start a kernel
+     * @param exeKernelFile the executable opencl kernel file
+     * @param kernelFunctionName kernel name
+     * @param batchSize the batch size of data
+     * @param inShmids the shared memory ids of the input data
+     * @param outShmids the shared memeory ids of the result
+     */
+    public void startKernel(String exeKernelFile,String kernelFunctionName,int batchSize,int[] inShmids,int[] outShmids){
         StringBuilder message = new StringBuilder("startKernel_").append(exeKernelFile).append("_").append(kernelFunctionName).append("_").append(String.valueOf(batchSize));
-        for(int i = 0;i<shmKeys.length;i++){
-            message.append("_").append(shmKeys[i]);
+        message.append("$");
+        for(int i = 0;i<inShmids.length;i++){
+            message.append("_").append(inShmids[i]);
+        }
+        message.append("$");
+        for(int i = 0;i<outShmids.length;i++){
+            message.append("_").append(outShmids[i]);
         }
         serializeAndSendString(message.toString());
     }

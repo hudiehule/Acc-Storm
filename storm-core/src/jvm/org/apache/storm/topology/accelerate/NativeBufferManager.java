@@ -39,7 +39,6 @@ public class NativeBufferManager {
     public void clearShareMemory(){
         shmClear(inputShmid);
         shmClear(outputShmid);
-        shmClear(new int[]{1});
     }
 
     public int[] getInputShmids(){

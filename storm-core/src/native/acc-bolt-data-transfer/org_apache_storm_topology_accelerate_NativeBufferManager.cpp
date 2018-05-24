@@ -284,7 +284,11 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
   (JNIEnv * env, jobject obj, jint shmid, jcharArray array, jint size){
          void * shared_memory = shmat(shmid,(void *)0,0);
          char * shared_stuff = (char *)shared_memory;
-         env->SetCharArrayRegion(array,0,size,(jchar *)shared_stuff);
+         jchar * arr = env->GetCharArrayElements(array,JNI_FALSE);
+         for(int i = 0; i<size;i++){
+              *(arr+i) = *(shared_stuff+i);
+         }
+         env->ReleaseCharArrayElements(array,arr,0);
   }
 
 /*

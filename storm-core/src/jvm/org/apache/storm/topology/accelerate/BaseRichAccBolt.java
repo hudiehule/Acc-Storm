@@ -121,7 +121,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
 
             //socket立即发送信息给OpenCL Host可以进行kernel计算 lastBatchFinished置为false 发送以后立即返回
             // 此时有线程等待OpenCL Host将结果回传给这个executor 传回以后这个线程使用collector.emit一条条发送给下游，完成以后将lastBatchFinished置为true
-            connection.startKernel(exeKernelFile,kernelFunctionName,batchSize,bufferManager.getInputBufferShmids());
+            connection.startKernel(exeKernelFile,kernelFunctionName,batchSize,bufferManager.getInputBufferShmids(),bufferManager.getOutputBufferShmids());
             lastBatchFinished = false;
             // 设置waiting唤醒waitingForResult线程继续执行 等待OpenCL执行完kernel将结果传回来 并组装成tuple发送到下游
             waiting.compareAndSet(false,true);
