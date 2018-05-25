@@ -206,6 +206,13 @@ public class Supervisor implements DaemonCommon, AutoCloseable {
 
         Localizer localizer = getLocalizer();
 
+        if((Boolean)conf.get(Config.SUPERVISOR_OCL_ENABLE)){
+            // get the nativeServer's port
+            LOG.info("Starting the deviceManager");
+            int port = Utils.getInt(conf.get(Config.OCL_NATIVE_PORT));
+            this.deviceManager = new DeviceManager(this,port);
+        }
+
         SupervisorHeartbeat hb = new SupervisorHeartbeat(conf, this);
         hb.run();
         // should synchronize supervisor so it doesn't launch anything after being down (optimization)
@@ -234,13 +241,6 @@ public class Supervisor implements DaemonCommon, AutoCloseable {
 
             // supervisor health check
             eventTimer.scheduleRecurring(300, 300, new SupervisorHealthCheck(this));
-        }
-
-        if((Boolean)conf.get(Config.SUPERVISOR_OCL_ENABLE)){
-            // get the nativeServer's port
-            LOG.info("Starting the deviceManager");
-            int port = Utils.getInt(conf.get(Config.OCL_NATIVE_PORT));
-            this.deviceManager = new DeviceManager(this,port);
         }
 
         LOG.info("Starting supervisor with id {} at host {}.", getId(), getHostName());

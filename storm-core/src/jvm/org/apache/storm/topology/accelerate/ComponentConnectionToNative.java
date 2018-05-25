@@ -16,6 +16,7 @@ public class ComponentConnectionToNative {
     public ComponentConnectionToNative(int port){
         try{
             conn = new Socket("localhost",port);conn.setTcpNoDelay(true);
+            conn.setTcpNoDelay(true);
             isConnected = true;
             out = new BufferedOutputStream(conn.getOutputStream());
             reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));

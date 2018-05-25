@@ -23,6 +23,8 @@ import org.apache.storm.cluster.IStormClusterState;
 import org.apache.storm.daemon.supervisor.Supervisor;
 import org.apache.storm.daemon.supervisor.oclDeviceManage.DeviceManager;
 import org.apache.storm.daemon.supervisor.oclDeviceManage.DeviceMetaData;
+import org.apache.storm.generated.ExecutorInfo;
+import org.apache.storm.generated.LocalAssignment;
 import org.apache.storm.generated.SupervisorInfo;
 import org.apache.storm.utils.Time;
 import org.apache.storm.utils.Utils;
@@ -31,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class SupervisorHeartbeat implements Runnable {
 
@@ -81,8 +84,20 @@ public class SupervisorHeartbeat implements Runnable {
             supervisorInfo.set_ocl_fpga_device_num(0);
             supervisorInfo.set_ocl_gpu_device_num(0);
         }
-        supervisorInfo.set_ocl_used_fpga_device_num(0);
+        // compute the used FPGA devices number of this supervisor
+        Map<Long,LocalAssignment> localAssignmentMap = supervisor.getCurrAssignment().get();
+        int usedFPGADevicesNum = 0;
+        for(LocalAssignment assignment : localAssignmentMap.values()){
+            List<ExecutorInfo> executors = assignment.get_executors();
+            for(ExecutorInfo executorInfo : executors){
+                if(executorInfo.isAssignedAccExecutor){
+                    usedFPGADevicesNum++;
+                }
+            }
+        }
+        supervisorInfo.set_ocl_used_fpga_device_num(usedFPGADevicesNum);
         supervisorInfo.set_ocl_used_gpu_device_num(0);
+        //
         return supervisorInfo;
     }
 
