@@ -152,7 +152,7 @@
         spouts (.get_spouts topology)
         bolts (.get_bolts topology)]
     (cond (contains? spouts component-id) :spout
-          (contains? bolts component-id) (if-let [is-acc-executor (:is-acc-executor executor)]
+          (contains? bolts component-id) (if-let [is-assigned-acc-executor (:is-assigned-acc-executor executor)]
                                                    :accBolt
                                                    :bolt)
           :else (throw-runtime "Could not find " component-id " in topology " topology))))

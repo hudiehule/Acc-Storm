@@ -1030,7 +1030,7 @@
    include-sys?
    last-err-fn]
   (let [exec-id->node+port (map (fn [[e node+port] ] [[(:start-task-id e) (:last-task-id e)] node+port]) exec->node+port)
-        executor-id->beat (map-key (fn [[e beat]] [(:start-task-id e) (:last-task-id e)]) beats)] ;;hudie modify
+        executor-id->beat (map (fn [[e beat]] [(:start-task-id e) (:last-task-id e)]) beats)] ;;hudie modify
     (->> ;; This iterates over each executor one time, because of lazy evaluation.
       (extract-data-from-hb exec-id->node+port              ;;hudie modify
                             task->component
@@ -1334,7 +1334,7 @@
    topology
    component-id]
   (let [exec-id->host+port (map (fn [[ e node+port]] [[(:start-task-id e) (:last-task-id e)] node+port]) exec->host+port) ;; hudie modify
-        executor-id->beat (map-key (fn [[e beat]] [(:start-task-id e) (:last-task-id e)]) beats)] ;; hudie modify
+        executor-id->beat (map (fn [[e beat]] [(:start-task-id e) (:last-task-id e)]) beats)] ;; hudie modify
     (->> ;; This iterates over each executor one time, because of lazy evaluation.
       (extract-data-from-hb exec-id->host+port              ;; hudie modify
                             task->component
