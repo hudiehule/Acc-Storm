@@ -69,7 +69,7 @@
                     (map (fn [e] {(executor/get-executor-info e) (executor/render-stats e)}))
                     (apply merge)))
         zk-hb {:storm-id (:storm-id worker)
-               :executor-stats stats
+               :executor-stats stats                        ;;stats是一个map {<^Executor,^BoltExecutorStats/^SpoutExecutorStats>}
                :uptime ((:uptime worker))
                :time-secs (current-time-secs)
                }]
