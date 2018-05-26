@@ -593,7 +593,7 @@
                                         {executor-id executor}))
         all-executors (map (fn [executor-id]
                              (if (contains? executor-id->executor executor-id) (executor-id->executor executor-id)
-                                                                              (Executor. (first executor-id) (last executor-id) false false))) all-executors)
+                                                                              (Executor. (first executor-id) (last executor-id) false false))) all-executor-ids)
         cache (select-keys cache all-executors)]
     (into {}
           (for [executor all-executors :let [curr (cache executor)]]
