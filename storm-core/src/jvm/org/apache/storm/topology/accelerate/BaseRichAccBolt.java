@@ -8,7 +8,7 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.apache.storm.utils.Utils;
 
-import java.net.Socket;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -36,6 +36,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         OutputCollector collector;
         ComponentConnectionToNative conn; // 需要一个socket连接
         boolean listenning;
+        long batchStartTime;
         public WaitingForResults(OutputCollector collector,ComponentConnectionToNative connection){
             this.collector = collector;
             this.conn = connection;
@@ -47,6 +48,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
                     boolean batchResultReturned = conn.waitingForResult(); // 阻塞函数等待这一批tuple计算完成
                     if(batchResultReturned){
                         bufferManager.pollOutputTupleEleFromShm();
+                        long batchNativeTime = System.nanoTime() - batchStartTime;
                         Values[] values = bufferManager.constructOutputData();
                         for(int i = 0;i<values.length;i++){
                             collector.emit(values[i]);
@@ -56,6 +58,11 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
                     waiting.compareAndSet(true,false);
                 }
             }
+        }
+
+        public void running(long startTime){
+            batchStartTime = startTime;
+            waiting.compareAndSet(false,true);
         }
         public void shutdown(){
             this.listenning = false;
@@ -109,13 +116,12 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         bufferManager.clearShm(); // 清理共享内存
     }
 
-    //按照顺序提取tuple里面的原始数据类型信息
-    public abstract Class[] extractTupleElements(Tuple tuple); //用户实现  将tuple分离出由基本类型数据组成的一些元素的集合
     @Override
     public void accExecute(Tuple input){
         if(bufferManager.isInputBufferFull()){
             while(!lastBatchFinished){ //当上一批的结果还未返回时 持续进行检查 此处阻塞
             }
+            long batchStartTime = System.nanoTime(); // 一个batch开始计算
             // 将每一个缓冲区的数据发送到共享内存中，发送完成以后将缓冲区清空 将缓冲区的isFull置为false
             bufferManager.pushInputTuplesFromBufferToShm();
 
@@ -124,7 +130,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             connection.startKernel(exeKernelFile,kernelFunctionName,batchSize,bufferManager.getInputBufferShmids(),bufferManager.getOutputBufferShmids());
             lastBatchFinished = false;
             // 设置waiting唤醒waitingForResult线程继续执行 等待OpenCL执行完kernel将结果传回来 并组装成tuple发送到下游
-            waiting.compareAndSet(false,true);
+            waitingForResultsThread.running(batchStartTime);
 
             /*
             在发送之前先检查上一批是否结果已经返回，如果已经返回，利用jni将数据发送到native共享内存；返回后表示数据发送成功 立即将缓冲区清空 可以接收下一批数据

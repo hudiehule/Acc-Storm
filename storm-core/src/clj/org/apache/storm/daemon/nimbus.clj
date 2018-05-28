@@ -182,7 +182,7 @@
      :submit-lock                         (Object.)
      :cred-update-lock                    (Object.)
      :log-update-lock                     (Object.)
-     :heartbeats-cache                    (atom {})
+     :heartbeats-cache                    (atom {})         ;;是nimbus缓存的拓扑的心跳信息 它的形式是 {<storm-id, cache>},storm-id是拓扑的id, cache是存放拓扑的每个executor的心跳，cache的形式是{<executor-id, executor-hb>}
      :downloaders                         (file-cache-map conf)
      :uploaders                           (file-cache-map conf)
      :blob-store                          blob-store
@@ -604,9 +604,9 @@
   (log-debug "Updating heartbeats for " storm-id " " (pr-str all-executors))
   (let [storm-cluster-state (:storm-cluster-state nimbus)
         executor-beats (.executor-beats storm-cluster-state storm-id (:executor->node+port existing-assignment)) ;; 一个map,{<Executor,executor-beat>} executor-beat: {:time-secs :uptime :stats}
-        executor-id-beats (map-key (fn [^Executor executor] [(:start-task-id executor) (:last-task-id executor)]) executor-beats)
+        executor-id-beats (map-key (fn [^Executor executor] [(:start-task-id executor) (:last-task-id executor)]) executor-beats) ;; hudie add
         cache (update-heartbeat-cache (@(:heartbeats-cache nimbus) storm-id)
-                                      executor-id-beats
+                                      executor-id-beats     ;;hudie modify
                                       all-executors
                                       ((:conf nimbus) NIMBUS-TASK-TIMEOUT-SECS))]
     (swap! (:heartbeats-cache nimbus) assoc storm-id cache)))

@@ -371,10 +371,10 @@
 
 (defn mk-executor [worker ^Executor executor-info initial-credentials]
   (let [executor-data (mk-executor-data worker executor-info)
-        executor-id [(:start-task-id executor-info) (:last-task-id executor-info)]
+        executor-id (:executor-id executor-data)
         _ (log-message "Loading " (if-let [is-assigned-acc (:is-assigned-acc-executor executor-info)]
                                              "acc"
-                                             "general ") "executor " (:component-id executor-data) ":" (pr-str executor-id))
+                                             "general ") "-executor " (:component-id executor-data) ":" (pr-str executor-id))
         task-datas (->> executor-data
                         :task-ids
                         (map (fn [t] [t (task/mk-task executor-data t)]))
@@ -1018,7 +1018,7 @@
                            (report-error error)
                            )))))
          (reset! open-or-prepare-was-called? true)
-         (log-message "Prepared bolt " component-id ":" (keys task-datas))
+         (log-message "Prepared accBolt " component-id ":" (keys task-datas))
          (setup-metrics! executor-data)
 
          (let [receive-queue (:receive-queue executor-data)
@@ -1028,7 +1028,7 @@
              0)))
        :kill-fn (:report-error-and-die executor-data)
        :factory? true
-       :thread-name (str component-id "-executor" (:executor-id executor-data)))]))
+       :thread-name (str component-id "-acc-executor" (:executor-id executor-data)))]))
 
 (defmethod close-component :spout [executor-data spout]
   (.close spout))
@@ -1036,9 +1036,15 @@
 (defmethod close-component :bolt [executor-data bolt]
   (.cleanup bolt))
 
+(defmethod clost-component :accBolt [executor-data accBolt]
+  (.accCleanup accBolt))
+
 ;; TODO: refactor this to be part of an executor-specific map
 (defmethod mk-executor-stats :spout [_ rate]
   (stats/mk-spout-stats rate))
 
 (defmethod mk-executor-stats :bolt [_ rate]
+  (stats/mk-bolt-stats rate))
+
+(defmethod mk-executor-stats :accBolt [_ rate]
   (stats/mk-bolt-stats rate))
