@@ -78,10 +78,6 @@ public class FStormTestTopology {
               System.out.println("Acc bolt preparation");
         }
         @Override
-        public Class[] extractTupleElements(Tuple tuple){
-             return new Class[1];
-        }
-        @Override
         public void execute(Tuple tuple){
          //用户执行逻辑 当这个组件不能在FPGA或者GPU上运行时 则还是放在CPU上运行  相应的在kernelFile中也有一种实现
             collector.emit(new Values("send"));
