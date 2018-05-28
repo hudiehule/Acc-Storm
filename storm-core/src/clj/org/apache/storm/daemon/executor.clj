@@ -1036,7 +1036,7 @@
 (defmethod close-component :bolt [executor-data bolt]
   (.cleanup bolt))
 
-(defmethod clost-component :accBolt [executor-data accBolt]
+(defmethod close-component :accBolt [executor-data accBolt]
   (.accCleanup accBolt))
 
 ;; TODO: refactor this to be part of an executor-specific map
