@@ -44,17 +44,18 @@ public class DeviceManager {
         isConnected = false;
     }
 
+    /**
+     * handle the message form the native server, get the number of FPGA
+     * the format of the message is like this "oclDeviceInfo<FPGANumber>2<FPGANumber>"
+     * @param msg
+     */
     public void handleMessages(String msg){
-        if(msg.indexOf("OclDeviceInfo")!= -1){
-            String[] infos = msg.split("/");
-            String fpgaInfo = infos[1];
-            String gpuInfo = infos[2];
-            int index = fpgaInfo.indexOf("_");
-            String fpgaDeviceNumStr = fpgaInfo.substring(index+1);
+        if(msg.startsWith("oclDeviceInfo")){
+            int startIndex = msg.indexOf("<FPGANumber>")+"<FPGANumber>".length();
+            int endIndex = msg.indexOf("<FPGANumber>",startIndex);
+            String fpgaDeviceNumStr = msg.substring(startIndex,endIndex);
             deviceMeta.setOcl_fpga_device_num(Integer.parseInt(fpgaDeviceNumStr));
-            index = gpuInfo.indexOf("_");
-            String gpuDeviceNumStr = gpuInfo.substring(index+1);
-            deviceMeta.setOcl_gpu_device_num(Integer.parseInt(gpuDeviceNumStr));
+            deviceMeta.setOcl_gpu_device_num(0); // set gpu number to 0
         }
         return;
     }

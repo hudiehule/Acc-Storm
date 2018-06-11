@@ -11,7 +11,7 @@ public class ConnectionToNative {
      private Socket conn = null;
      private BufferedOutputStream outputStream = null;
      private BufferedReader reader = null;
-
+     private static final String REQUEST_DEVICE_NUM = "REQUEST_DEVICE_NUM";
     public ConnectionToNative(DeviceManager deviceManager,int port) throws IOException{
         this.deviceManager = deviceManager;
         conn = new Socket("localhost", port);
@@ -25,9 +25,8 @@ public class ConnectionToNative {
      * @throws IOException
      */
     public void requestDeviceNum() throws IOException{
-        String msg = "REQUEST_DEVICE_NUM";
         try{
-            byte[] b = msg.getBytes();
+            byte[] b = REQUEST_DEVICE_NUM.getBytes();
             outputStream.write(b);
             outputStream.flush();
         }catch(IOException e){

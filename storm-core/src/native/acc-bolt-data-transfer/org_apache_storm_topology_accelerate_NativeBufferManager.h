@@ -22,8 +22,9 @@ JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
  * Method:    shmClear
  * Signature: ([I)V
  */
+ /*
 JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_shmClear
-  (JNIEnv *, jobject, jintArray);
+  (JNIEnv *, jobject, jintArray);*/
 
 /*
  * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
@@ -154,6 +155,47 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
  */
 JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_getDoubleFromNativeShm
   (JNIEnv *, jobject, jint, jdoubleArray, jint);
+
+/*
+ * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
+ * Method:    setInputDataReady
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_setInputDataReady
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
+ * Method:    waitOutputDataReady
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_waitOutputDataReady
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
+ * Method:    setOutputDataConsumed
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_setOutputDataConsumed
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
+ * Method:    setInputDataEnd
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_setInputDataEnd
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
+ * Method:    waitInputDataConsumed
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_waitInputDataConsumed
+  (JNIEnv *, jobject, jint);
+
 
 #ifdef __cplusplus
 }

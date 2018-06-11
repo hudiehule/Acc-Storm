@@ -41,12 +41,12 @@ public class TupleBuffers {
     public int size;  // 每一个buffer的大小 也就是batch的大小
     public String[] types;
  //   public int[] sizeBytes; //每个缓冲区的所占内存空间大小 建立共享内存时需要
-    public TupleBuffers(Class[] tupleEleTypes,int size){
+    public TupleBuffers(String[] tupleEleTypes,int size){
         int elementNum = tupleEleTypes.length;
         buffers = new TupleElementBuffer[elementNum];
        // sizeBytes = new int[elementNum];
         for(int i = 0; i<elementNum;i++){
-            String typeName = tupleEleTypes[i].getSimpleName().toLowerCase();
+            String typeName = tupleEleTypes[i];
             switch(typeName){
                 case "int": {
                     buffers[i] = new TupleElementBuffer<Integer>(size,"int");

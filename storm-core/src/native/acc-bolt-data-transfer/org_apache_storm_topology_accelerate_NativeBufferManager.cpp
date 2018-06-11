@@ -16,7 +16,19 @@ const char* FLOATTYPE = "float";
 const char* CHARTYPE = "char";
 const char* BYTETYPE = "byte";
 const char* BOOLEANTYPE = "boolean";
+const char* INPUT_AND_OUTPUT_FLAG_TYPE = "INPUT_AND_OUTPUT_FLAG_TYPE";
 
+const int INPUT_DATA_READY = 1;
+const int INPUT_DATA_CONSUMED = 0;
+const int INPUT_DATA_END = -1;
+
+const int OUTPUT_DATA_READY = 1;
+const int OUTPUT_DATA_CONSUMED = 0;
+
+struct shared_data_flag {
+     int input_flag;
+     int output_flag;
+};
 /*
  * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
  * Method:    shmGet
@@ -28,25 +40,47 @@ JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
          const char *data_type_str;
          data_type_str = (const char *)env->GetStringUTFChars(data_type,NULL);
          if(data_type_str == NULL){
-           fprintf(stderr,"get data type failed\n");
-           exit(EXIT_FAILURE);
+             fprintf(stderr,"get data type failed\n");
+             exit(EXIT_FAILURE);
          }
-         if(strcmp(data_type_str,INTTYPE) == 0){ data_type_size = sizeof(int); }
-         else if(strcmp(data_type_str,SHORTTYPE) == 0){ data_type_size = sizeof(short); }
-         else if(strcmp(data_type_str,LONGTYPE) == 0){ data_type_size = sizeof(long); }
-         else if(strcmp(data_type_str,DOUBLETYPE) == 0){ data_type_size = sizeof(double); }
-         else if(strcmp(data_type_str,FLOATTYPE) == 0){ data_type_size = sizeof(float); }
-         else if(strcmp(data_type_str,CHARTYPE) == 0){ data_type_size = sizeof(char); }
-         else if(strcmp(data_type_str,BYTETYPE) == 0){ data_type_size = sizeof(char); }
-         else if(strcmp(data_type_str,BOOLEANTYPE) == 0){ data_type_size = sizeof(bool); }
-         else{
-              fprintf(stderr,"data_type is invalid\n");
-              exit(EXIT_FAILURE);
+         if(strcmp(data_type_str,INPUT_AND_OUTPUT_FLAG_TYPE) == 0){
+              data_type_size = sizeof(struct shared_flag);
+         }else if(strcmp(data_type_str,INTTYPE) == 0){
+             data_type_size = sizeof(int);
+         }else if(strcmp(data_type_str,SHORTTYPE) == 0){
+             data_type_size = sizeof(short);
+         }else if(strcmp(data_type_str,LONGTYPE) == 0){
+             data_type_size = sizeof(long);
+         }else if(strcmp(data_type_str,DOUBLETYPE) == 0){
+             data_type_size = sizeof(double);
+         }else if(strcmp(data_type_str,FLOATTYPE) == 0){
+             data_type_size = sizeof(float);
+         }else if(strcmp(data_type_str,CHARTYPE) == 0){
+             data_type_size = sizeof(char);
+         }else if(strcmp(data_type_str,BYTETYPE) == 0){
+             data_type_size = sizeof(char);
+         }else if(strcmp(data_type_str,BOOLEANTYPE) == 0){
+             data_type_size = sizeof(bool);
+         }else{
+             fprintf(stderr,"data_type is invalid\n");
+             exit(EXIT_FAILURE);
          }
          jint shmid = shmget(IPC_PRIVATE,data_type_size * size,0666|IPC_CREAT);
          if(shmid == -1){
-            fprintf(stderr,"shmget failed\n");
-            exit(EXIT_FAILURE);
+             fprintf(stderr,"shmget failed\n");
+             exit(EXIT_FAILURE);
+         }
+         // 初始化data_flag的值
+         if(strcmp(data_type_str,INPUT_AND_OUTPUT_FLAG_TYPE) == 0){
+             void * shared_memory = shmat(shmid,(void *)0,0);
+             struct shared_data_flag * data_flag = (struct shared_data_flag * )shared_memory;
+             data_flag->input_flag = INPUT_DATA_CONSUMED;
+             data_flag->output_flag = OUTPUT_DATA_CONSUMED;
+             if(shmdt(shared_memory) == -1){
+                fprinf(stderr,"shmdt failed\n");
+                env->ReleaseStringUTFChars(data_type,data_type_str);
+                exit(EXIT_FAILURE);
+             }
          }
          env->ReleaseStringUTFChars(data_type,data_type_str);
          return shmid;
@@ -55,7 +89,7 @@ JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
  * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
  * Method:    shmClear
  * Signature: ([I)V
- */
+ *//*
 JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_shmClear
   (JNIEnv * env, jobject obj, jintArray shmid_array){
          jint len = env->GetArrayLength(shmid_array);
@@ -70,7 +104,8 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
                    exit(EXIT_FAILURE);
             }
          }
-  }
+         env->ReleaseIntArrayElements(shmid_array,shmids,0);
+  }*/
 /*
  * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
  * Method:    putIntToNativeShm
@@ -86,6 +121,10 @@ JNIEXPORT jboolean JNICALL Java_org_apache_storm_topology_accelerate_NativeBuffe
          }
          for(int i = 0;i<size;i++){
              *(shared_stuff+i) = arr[i];
+         }
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              return JNI_FALSE;
          }
          env->ReleaseIntArrayElements(array,arr,0);
          return JNI_TRUE;
@@ -106,6 +145,10 @@ JNIEXPORT jboolean JNICALL Java_org_apache_storm_topology_accelerate_NativeBuffe
          for(int i = 0;i<size;i++){
              *(shared_stuff+i) = arr[i];
          }
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              return JNI_FALSE;
+         }
          env->ReleaseLongArrayElements(array,arr,0);
          return JNI_TRUE;
   }
@@ -125,6 +168,10 @@ JNIEXPORT jboolean JNICALL Java_org_apache_storm_topology_accelerate_NativeBuffe
          for(int i = 0; i<size;i++){
              *(shared_stuff+i) = arr[i];
          }
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              return JNI_FALSE;
+         }
          env->ReleaseShortArrayElements(array,arr,0);
          return JNI_TRUE;
   }
@@ -143,6 +190,10 @@ JNIEXPORT jboolean JNICALL Java_org_apache_storm_topology_accelerate_NativeBuffe
          }
          for(int i = 0; i<size;i++){
              *(shared_stuff+i) = arr[i];
+         }
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              return JNI_FALSE;
          }
          env->ReleaseByteArrayElements(array,arr,0);
          return JNI_TRUE;
@@ -164,6 +215,10 @@ JNIEXPORT jboolean JNICALL Java_org_apache_storm_topology_accelerate_NativeBuffe
          for(int i = 0;i<size;i++){
              *(shared_stuff + i) = arr[i];
          }
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              return JNI_FALSE;
+         }
          env->ReleaseCharArrayElements(array,arr,0);
          return JNI_TRUE;
    }
@@ -183,6 +238,10 @@ JNIEXPORT jboolean JNICALL Java_org_apache_storm_topology_accelerate_NativeBuffe
          }
          for(int i = 0;i<size;i++){
              *(shared_stuff + i) = arr[i];
+         }
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              return JNI_FALSE;
          }
          env->ReleaseBooleanArrayElements(array,arr,0);
          return JNI_TRUE;
@@ -204,6 +263,10 @@ JNIEXPORT jboolean JNICALL Java_org_apache_storm_topology_accelerate_NativeBuffe
          for(int i = 0;i<size;i++){
              *(shared_stuff + i) = arr[i];
          }
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              return JNI_FALSE;
+         }
          env->ReleaseFloatArrayElements(array,arr,0);
          return JNI_TRUE;
   }
@@ -224,6 +287,10 @@ JNIEXPORT jboolean JNICALL Java_org_apache_storm_topology_accelerate_NativeBuffe
          for(int i = 0;i<size;i++){
              *(shared_stuff + i) = arr[i];
          }
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              return JNI_FALSE;
+         }
          env->ReleaseDoubleArrayElements(array,arr,0);
          return JNI_TRUE;
   }
@@ -237,6 +304,10 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
          void * shared_memory = shmat(shmid,(void *)0,0);
          int* shared_stuff = (int *)shared_memory;
          env->SetIntArrayRegion(array,0,size,(jint *)shared_stuff);
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              exit(EXIT_FAILURE);
+         }
   }
 
 /*
@@ -249,6 +320,10 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
          void * shared_memory = shmat(shmid,(void *)0,0);
          long * shared_stuff = (long *)shared_memory;
          env->SetLongArrayRegion(array,0,size,(jlong *)shared_stuff);
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              exit(EXIT_FAILURE);
+         }
   }
 
 /*
@@ -261,6 +336,10 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
          void * shared_memory = shmat(shmid,(void *)0,0);
          short * shared_stuff = (short *)shared_memory;
          env->SetShortArrayRegion(array,0,size,(jshort *)shared_stuff);
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              exit(EXIT_FAILURE);
+         }
   }
 
 /*
@@ -273,6 +352,10 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
          void * shared_memory = shmat(shmid,(void *)0,0);
          char * shared_stuff = (char *)shared_memory;
          env->SetByteArrayRegion(array,0,size,(jbyte *)shared_stuff);
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              exit(EXIT_FAILURE);
+         }
   }
 
 /*
@@ -289,6 +372,10 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
               *(arr+i) = *(shared_stuff+i);
          }
          env->ReleaseCharArrayElements(array,arr,0);
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              exit(EXIT_FAILURE);
+         }
   }
 
 /*
@@ -301,6 +388,10 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
          void * shared_memory = shmat(shmid,(void *)0,0);
          bool * shared_stuff = (bool *)shared_memory;
          env->SetBooleanArrayRegion(array,0,size,(jboolean *)shared_stuff);
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              exit(EXIT_FAILURE);
+         }
   }
 
 /*
@@ -313,6 +404,10 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
          void * shared_memory = shmat(shmid,(void *)0,0);
          float * shared_stuff = (float *)shared_memory;
          env->SetFloatArrayRegion(array,0,size,(jfloat *)shared_stuff);
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              exit(EXIT_FAILURE);
+         }
   }
 
 /*
@@ -325,5 +420,89 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
          void * shared_memory = shmat(shmid,(void *)0,0);
          double * shared_stuff = (double *)shared_memory;
          env->SetDoubleArrayRegion(array,0,size,(jdouble *)shared_stuff);
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              exit(EXIT_FAILURE);
+         }
   }
 
+/*
+ * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
+ * Method:    setInputDataReady
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_setInputDataReady
+  (JNIEnv * env, jobject obj, jint shmid){
+         void * shared_memory = shmat(shmid,(void *)0,0);
+         struct shared_data_flag * shared_data_flag = (struct shared_data_flag *)shared_memory;
+         shared_data_flag->input_flag = INPUT_DATA_READY;
+         if(shmdt(shared_memory) == -1){
+              fprintf(stderr,"shmdt failed\n");
+              exit(EXIT_FAILURE);
+         }
+  }
+
+/*
+ * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
+ * Method:    waitOutputDataReady
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_waitOutputDataReady
+  (JNIEnv * env, jobject obj, jint shmid){
+        void * shared_memory = shmat(shmid,(void *)0,0);
+        struct shared_data_flag * shared_data_flag = (struct shared_data_flag *)shared_memory;
+        while(shared_data_flag->output_flag != OUTPUT_DATA_READY){ }
+        shraed_data_flag->input_flag = INPUT_DATA_NOT_READY;
+        if(shmdt(shared_memory) == -1){
+             fprintf(stderr,"shmdt failed\n");
+             exit(EXIT_FAILURE);
+        }
+  }
+
+/*
+ * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
+ * Method:    setOutputDataConsumed
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_setOutputDataConsumed
+  (JNIEnv * env, jobject obj, jint shmid){
+        void * shared_memory = shmat(shmid,(void *)0,0);
+        struct shared_data_flag * shared_data_flag = (struct shared_data_flag *)shared_memory;
+        shared_data_flag->output_flag = OUTPUT_DATA_CONSUMED;
+        if(shmdt(shared_memory) == -1){
+             fprintf(stderr,"shmdt failed\n");
+             exit(EXIT_FAILURE);
+        }
+  }
+
+/*
+ * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
+ * Method:    setInputDataEnd
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_setInputDataEnd
+  (JNIEnv * env, jobject obj, jint shmid){
+        void * shared_memory = shmat(shmid,(void *)0,0);
+        struct shared_data_flag * shared_data_flag = (struct shared_data_flag *)shared_memory;
+        shared_data_flag->input_flag = INPUT_DATA_END;
+        if(shmdt(shared_memory) == -1){
+             fprintf(stderr,"shmdt failed\n");
+             exit(EXIT_FAILURE);
+        }
+  }
+
+/*
+ * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
+ * Method:    waitInputDataConsumed
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_waitInputDataConsumed
+  (JNIEnv * env, jobject obj, jint shmid){
+        void * shared_memory = shmat(shmid,(void *)0,0);
+        struct shared_data_flag * shared_data_flag = (struct shared_data_flag *)shared_memory;
+        while(shared_data_flag->input_flag != INPUT_DATA_CONSUMED){ }
+        if(shmdt(shared_memory) == -1){
+             fprintf(stderr,"shmdt failed\n");
+             exit(EXIT_FAILURE);
+        }
+  }

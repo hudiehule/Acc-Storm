@@ -32,28 +32,19 @@ public class ComponentConnectionToNative {
      * @param exeKernelFile the file name of the executable kernel file
      * @param kernelFunctionName the kernel function name of this component
      */
-    public void startOpenCLProgram(String exeKernelFile,String kernelFunctionName){
-        serializeAndSendString("startOpenCL_"+exeKernelFile+"_"+kernelFunctionName);
+    public boolean sendInitialOpenCLProgramRequest(String exeKernelFile,String kernelFunctionName,
+                                      int batchSize,String[] inputDataTypes,int[] inShmids,String[] outputDataTypes,int[] outShmids,int shmFlagid){
+        String message = Messages.constructStartOpenCLRuntimeMsg(exeKernelFile,kernelFunctionName,batchSize,inputDataTypes,inShmids,outputDataTypes,outShmids,shmFlagid);
+        serializeAndSendString(message);
+        return waitingForResult(); // 需要修改
     }
 
-    /**
-     * send a request to OpenCL Host to terminate a program and clean up some resources
-     * @param exeKernelFile the file name of the executable kernel file
-     * @param kernelFunctionName the kernel function name of this component
-     */
-    public void cleanupOpenCLProgram(String exeKernelFile,String kernelFunctionName){
-        serializeAndSendString("cleanupOpenCL_"+exeKernelFile+"_"+kernelFunctionName);
-    }
+ /*   public void cleanupOpenCLProgram(String exeKernelFile,String kernelFunctionName){
+        serializeAndSendString(Messages.STOP_KERNEL_RUNNING);
+    }*/
 
-    /**
-     * send a request to start a kernel
-     * @param exeKernelFile the executable opencl kernel file
-     * @param kernelFunctionName kernel name
-     * @param batchSize the batch size of data
-     * @param inShmids the shared memory ids of the input data
-     * @param outShmids the shared memeory ids of the result
-     */
-    public void startKernel(String exeKernelFile,String kernelFunctionName,int batchSize,int[] inShmids,int[] outShmids){
+
+   /* public void startKernel(String exeKernelFile,String kernelFunctionName,int batchSize,int[] inShmids,int[] outShmids){
         StringBuilder message = new StringBuilder("startKernel_").append(exeKernelFile).append("_").append(kernelFunctionName).append("_").append(String.valueOf(batchSize));
         message.append("$");
         for(int i = 0;i<inShmids.length;i++){
@@ -64,14 +55,14 @@ public class ComponentConnectionToNative {
             message.append("_").append(outShmids[i]);
         }
         serializeAndSendString(message.toString());
-    }
+    }*/
 
     public boolean waitingForResult(){
         try {
             while (true) {
                 // readLine是一个阻塞函数，当没有数据读取时，就一直会阻塞在那里，而不是返回null,并且只有遇到'/r','/n'或者“/r/n”才会返回
                 String recvMsg = reader.readLine();
-                if ( recvMsg != "batch finished") {
+                if ( recvMsg != Messages.START_OPENCL_RUNTIME_ACK) {
                     // Connection lost
                     return false;
                 }

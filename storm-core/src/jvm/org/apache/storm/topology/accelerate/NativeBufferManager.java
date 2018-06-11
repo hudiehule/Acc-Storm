@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 public class NativeBufferManager {
     private static final Logger LOG = LoggerFactory.getLogger(NativeBufferManager.class);
     private static boolean nativeLibraryLoaded = false;
+    private static final String INPUT_AND_OUTPUT_FLAG_TYPE = "INPUT_AND_OUTPUT_FLAG_TYPE";
+    private static int shmFlagid;
     private int[] inputShmid; // 存放已经建立过的输入共享内存标识符
     private int[] outputShmid; // 存放已经建立的输出共享内存标识符
     static {
@@ -36,9 +38,25 @@ public class NativeBufferManager {
         outputShmid = shmGet(size,outputShmKeys,outputTupleEleTypes);*/
     }
 
-    public void clearShareMemory(){
-        shmClear(inputShmid);
-        shmClear(outputShmid);
+    public void createInputAndOutputFlagShm(){
+        shmFlagid = shmGet(1,INPUT_AND_OUTPUT_FLAG_TYPE);
+    }
+
+  /*  public void clearShareMemory(){
+        int[] shmids = new int[inputShmid.length+outputShmid.length+1];
+        int index = 0;
+        for(int i : inputShmid){
+            shmids[index++] = i;
+        }
+        for(int i : outputShmid){
+            shmids[index++] = i;
+        }
+        shmids[index] = shmFlagid;
+        shmClear(shmids);
+    }*/
+
+    public void setKernelInputFlagEnd(){
+        setInputDataEnd(shmFlagid);
     }
 
     public int[] getInputShmids(){
@@ -48,7 +66,13 @@ public class NativeBufferManager {
     public int[] getOutputShmids(){
         return outputShmid;
     }
-    public void pushInputTuplesFromBufferToShm(int size, TupleBuffers buffers){
+
+    public int getShmFlagid(){
+        return shmFlagid;
+    }
+    public void pushInputTuplesFromBufferToShmAndStartKernel(int size, TupleBuffers buffers){
+        //等待input data flag的值为0 表示可以向共享内存传送数据了
+        waitInputDataConsumed(shmFlagid);
         for(int i = 0; i < buffers.types.length;i++){
             switch(buffers.types[i]){
                 case "int": {
@@ -117,9 +141,13 @@ public class NativeBufferManager {
                 }
             }
         }
+        //设置input flag 为1 表示共享内存的数据已经准备好 内核可以进行计算了
+        setInputDataReady(shmFlagid);
     }
 
-    public void pollOutputTupleEleFromShm(int size,TupleBuffers buffers){
+    public void waitAndPollOutputTupleEleFromShm(int size,TupleBuffers buffers){
+        //首先等待outputFlag 的值为1 表示结果可取
+        waitOutputDataReady(shmFlagid);
         for(int i = 0; i <buffers.types.length;i++){
             switch(buffers.types[i]){
                 case "int":{
@@ -188,10 +216,11 @@ public class NativeBufferManager {
                 }
             }
         }
+        setOutputDataConsumed(shmFlagid);
     }
     // 该函数返回的是创建的共享内存标识符
     public native int shmGet(int size,String shmTypes);
-    public native void shmClear(int[] shmids);
+    // public native void shmClear(int[] shmids);
 
     public native boolean putIntToNativeShm(int shmid, int[] data,int size);
     public native boolean putLongToNativeShm(int shmid, long[] data,int size);
@@ -211,4 +240,9 @@ public class NativeBufferManager {
     public native void getFloatFromNativeShm(int shmid,float[] data, int size);
     public native void getDoubleFromNativeShm(int shmid,double[] data, int size);
 
+    public native void setInputDataReady(int shmid); //将inputFlag的值设置为1 表示输入的数据可用了
+    public native void waitOutputDataReady(int shmid);  //阻塞等待ouputFlag的值为1 为1 就返回 不为1 就循环等待
+    public native void setOutputDataConsumed(int shmid); // 将outputFlag 设置为0
+    public native void setInputDataEnd(int shmid); //设置inputFlag 的值为-1 表示这个bolt要结束了 对应的kernel函数以及相关资源都可以进行清理了
+    public native void waitInputDataConsumed(int shmid); //等待共享内存中input 数据被消费 这样就可以传送第二批数据到共享内存了
 }

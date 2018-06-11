@@ -11,6 +11,7 @@ public class BufferManager {
     private NativeBufferManager nativeBufferManager;
     private TupleBuffers inputBuffer = null;
     private TupleBuffers outputBuffer = null;
+    private int inputAndOutputFlagShmid;
     // private int[] inputBufferShmids;
     private int[] inputBufferShmids; //保存每个inputBuffer对应的共享内存数组的key 需要传送给Native OpenCL Host端
     private int[] outputBufferShmids;
@@ -20,7 +21,7 @@ public class BufferManager {
         this.nativeBufferManager = new NativeBufferManager();
         inputBufferShmids = new int[inputBuffer.size];
         outputBufferShmids = new int[outputBuffer.size];
-        //  建立native共享内存 对input和output都要建立
+        //  建立native共享内存 对input和output都要建立 并且建立一个共享存储区 存放flag变量
         //  NativeBufferManager.shmGet(inputBuffer.size);
         initialShm();
     }
@@ -40,11 +41,12 @@ public class BufferManager {
     private void initialShm(){
        // generateShmKeys(inputBufferShmKeys,outputBufferShmKeys);
         nativeBufferManager.crateSharedMemory(inputBuffer.size,inputBuffer.types,outputBuffer.types);
+        nativeBufferManager.createInputAndOutputFlagShm();
     }
 
-    public void clearShm(){
+  /*  public void clearShm(){
         nativeBufferManager.clearShareMemory();
-    }
+    }*/
     public boolean isInputBufferFull(){
         return inputBuffer.isFull();
     }
@@ -55,20 +57,26 @@ public class BufferManager {
     public int[] getOutputBufferShmids(){
         return nativeBufferManager.getOutputShmids();
     }
+    public int getInputAndOutputFlagShmid(){
+        return nativeBufferManager.getShmFlagid();
+    }
     public void putInputTupleToBuffer(Tuple tuple){
          List<Object> tupleElements = tuple.getValues();
          inputBuffer.addTuple(tupleElements);
     }
 
-    public void pollOutputTupleEleFromShm(){
-         nativeBufferManager.pollOutputTupleEleFromShm(outputBuffer.size,outputBuffer);
+    public void waitAndPollOutputTupleEleFromShm(){
+         nativeBufferManager.waitAndPollOutputTupleEleFromShm(outputBuffer.size,outputBuffer);
     }
 
-    public void pushInputTuplesFromBufferToShm(){
-         nativeBufferManager.pushInputTuplesFromBufferToShm(inputBuffer.size,inputBuffer);
+    public void pushInputTuplesFromBufferToShmAndStartKernel(){
+         nativeBufferManager.pushInputTuplesFromBufferToShmAndStartKernel(inputBuffer.size,inputBuffer);
          inputBuffer.resetBuffers();
     }
 
+    public void setKernelInputFlagEnd(){
+        nativeBufferManager.setKernelInputFlagEnd();
+    }
     /**
      * construct the tuples that will be sent to the downstream
      * @return
