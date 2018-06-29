@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 
 public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccBolt{
+    private transient OutputCollector accCollector;
     private static int DEFAULT_BATCH_SIZE = 200;
     private int batchSize;
     private String exeKernelFile;
@@ -49,6 +50,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
                             collector.emit(values[i]);
                         }
                     //    lastBatchFinished = true;
+                    System.out.println("batch time : " + batchNativeTime);
                     waiting.compareAndSet(true,false);
                 }
             }
@@ -94,10 +96,10 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
      */
     @Override
     public void accPrepare(Map stormConf, TopologyContext context,OutputCollector collector){
+        this.accCollector = collector;
         //建立输入输出缓冲区与buffermanager 同时也建立了共享内存
         this.bufferManager = new BufferManager(new TupleBuffers(inputTupleEleTypes,batchSize),new TupleBuffers(outputTupleEleTypes,batchSize));
-        String exeKernelFile = context.getRawTopology().get_kernel_file_str();
-        this.exeKernelFile = exeKernelFile;
+        this.exeKernelFile = context.getRawTopology().get_kernel_file_str();
         //建立到OpenCL Host端的sock连接
         this.connection = new ComponentConnectionToNative(Utils.getInt(stormConf.get(Config.OCL_NATIVE_PORT)));
         //发送消息给nativeMachine 启动一个program 建立一个FPGA command，并且阻塞等待一个ack返回
@@ -152,6 +154,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
              */
         }
         bufferManager.putInputTupleToBuffer(input); //缓冲未满则直接将数据放入缓冲区
+        accCollector.ack(input);
     }
 
 }
