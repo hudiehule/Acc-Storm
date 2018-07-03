@@ -11,6 +11,7 @@ import org.apache.storm.task.TopologyContext;
 
 import org.apache.storm.topology.*;
 import org.apache.storm.topology.accelerate.BaseRichAccBolt;
+import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.topology.base.BaseRichSpout;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
@@ -28,8 +29,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class FStormTestTopology {
 
     public static class DataSpout extends BaseRichSpout {
-
-
+        private int sleepTime;
         SpoutOutputCollector _collector;
         Random _rand;
         private static final String[] CHOICES = {
@@ -39,7 +39,9 @@ public class FStormTestTopology {
                 "this is a test of the emergency broadcast system this is only a test",
                 "peter piper picked a peck of pickeled peppers"
         };
-
+        public DataSpout(int time){
+            this.sleepTime = time;
+        }
         @Override
         public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
             _collector = collector;
@@ -49,7 +51,7 @@ public class FStormTestTopology {
         @Override
         public void nextTuple() {
             String sentence = CHOICES[_rand.nextInt(CHOICES.length)];
-            Utils.sleep(1000);
+            Utils.sleep(sleepTime);
             _collector.emit(new Values(sentence), sentence);
         }
         @Override
@@ -68,6 +70,23 @@ public class FStormTestTopology {
     }
 
 
+    public static class SplitBolt extends BaseRichBolt{
+        OutputCollector _collector;
+        public void prepare(Map conf,TopologyContext context,OutputCollector collector){
+            _collector = collector;
+        }
+        public void declareOutputFields(OutputFieldsDeclarer declarer){
+            declarer.declare(new Fields("char element"));
+        }
+        public void execute(Tuple tuple){
+            String sentence = tuple.getString(0);
+            char[] ch = sentence.toCharArray();
+            for (char ele : ch) {
+                if(ele != ' ') _collector.emit(tuple,new Values(ch));
+            }
+            _collector.ack(tuple);
+        }
+    }
     public static class MapBolt extends BaseRichAccBolt {
         private OutputCollector collector;
         public MapBolt(Class[] inputTupleEleTypes,Class[] outputTupleEleTypes,int batchSize,String kernelName){
@@ -80,47 +99,78 @@ public class FStormTestTopology {
         @Override
         public void execute(Tuple tuple){
          //用户执行逻辑 当这个组件不能在FPGA或者GPU上运行时 则还是放在CPU上运行  相应的在kernelFile中也有一种实现
-            collector.emit(new Values("send"));
+            char a = (char)tuple.getValue(0);
+            int value;
+            if(a > 'a' && a< 'z'){
+                value = a - 'a';
+            }else{
+                value = a - 'A';
+            }
+            collector.emit(tuple,new Values(value * value));
+            collector.ack(tuple);
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
-           declarer.declare(new Fields("sentence"));
+           declarer.declare(new Fields("char_int_value"));
         }
-
 
     }
 
+    public static class ViewBolt extends BaseRichBolt{
+        OutputCollector _collector;
+        public void prepare(Map conf,TopologyContext context,OutputCollector collector){
+            _collector = collector;
+        }
+        public void declareOutputFields(OutputFieldsDeclarer declarer){
+        }
+        public void execute(Tuple tuple){
+            int value = tuple.getInteger(0);
+            System.out.println("result: " + value);
+            _collector.ack(tuple);
+        }
+    }
     public static void main(String[] args) throws Exception{
-        TopologyBuilder builder = new TopologyBuilder();
+        if(args == null ||args.length <7){
+            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers sleepTime");
+        }else{
+            int spoutNum = Integer.valueOf(args[0]);
+            int bolt1Num = Integer.valueOf(args[1]);
+            int bolt2Num = Integer.valueOf(args[2]);
 
-        builder.setSpout("spout",new DataSpout(),1);
-        builder.setAccBolt("accbolt",new MapBolt(new Class[]{float.class,float.class}, new Class[]{float.class},1000,"multKernel")).shuffleGrouping("spout");
+            int numAckers = Integer.valueOf(args[3]);
+            int numWorkers = Integer.valueOf(args[4]);
 
-        Config conf = new Config();
-        conf.setNumWorkers(2);
+            int sleepTime = Integer.valueOf(args[5]);
+            int batchSize = Integer.valueOf(args[6]);
+            TopologyBuilder builder = new TopologyBuilder();
 
-        String kernel = "__kernel void "+
-                        "multKernel(__global const float *a,"+
-                        "             __global const float *b,"+
-                        "             __global float *c)"+
-                        "{"+
-                        "    int gid = get_global_id(0);"+
-                        "    c[gid] = a[gid] * b[gid];"+
-                        "}";
-        builder.setTopologyKernelFile(kernel, KernelFileArgumentType.FILESTRING);//设置kernel本地可执行文件的路径 这个kernel必须是事先编译好的 提供kernel名称就可以了 去找
-        String name = "FStormTestTopology"; //拓扑名称
+            builder.setSpout("spout",new DataSpout(sleepTime),spoutNum);
+            builder.setBolt("split",new SplitBolt(),bolt1Num);
+            builder.setAccBolt("accbolt",new MapBolt(new Class[]{char.class}, new Class[]{int.class},batchSize,"compute")).shuffleGrouping("split");
+            builder.setBolt("view",new ViewBolt(),bolt2Num);
 
-        StormSubmitter.submitTopology(name,conf,builder.createTopology());
+            Config conf = new Config();
+            conf.setNumWorkers(numWorkers);
+            conf.setNumAckers(numAckers);
+            conf.setDebug(true);
 
-        Map clusterConf = Utils.readStormConfig();
-        clusterConf.putAll(Utils.readCommandLineOpts());
-        Nimbus.Client client = NimbusClient.getConfiguredClient(clusterConf).getClient();
+            String aoclFilePath = "compute.aocx";
+            builder.setTopologyKernelFile(aoclFilePath, KernelFileArgumentType.FILEPATH);//设置kernel本地可执行文件的路径 这个kernel必须是事先编译好的 提供kernel名称就可以了 去找
+            String name = "FStormTestTopology"; //拓扑名称
 
-        Thread.sleep(60*1000); //运行十分钟
-        //kill the topology
-        KillOptions opts = new KillOptions();
-        opts.set_wait_secs(0);
-        client.killTopologyWithOpts(name, opts);
+            StormSubmitter.submitTopology(name,conf,builder.createTopology());
+
+            Map clusterConf = Utils.readStormConfig();
+            clusterConf.putAll(Utils.readCommandLineOpts());
+            Nimbus.Client client = NimbusClient.getConfiguredClient(clusterConf).getClient();
+
+            Thread.sleep(60*1000); //运行十分钟
+            //kill the topology
+            KillOptions opts = new KillOptions();
+            opts.set_wait_secs(0);
+            client.killTopologyWithOpts(name, opts);
+        }
+
     }
 
 }
