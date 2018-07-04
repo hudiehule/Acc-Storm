@@ -131,7 +131,7 @@ public class FStormTestTopology {
     }
     public static void main(String[] args) throws Exception{
         if(args == null ||args.length <7){
-            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers sleepTime");
+            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers sleepTime batchSize");
         }else{
             int spoutNum = Integer.valueOf(args[0]);
             int bolt1Num = Integer.valueOf(args[1]);
@@ -154,8 +154,8 @@ public class FStormTestTopology {
             conf.setNumAckers(numAckers);
             conf.setDebug(true);
 
-            String aoclFilePath = "compute.aocx";
-            builder.setTopologyKernelFile(aoclFilePath, KernelFileArgumentType.FILEPATH);//设置kernel本地可执行文件的路径 这个kernel必须是事先编译好的 提供kernel名称就可以了 去找
+            String aoclFile = "compute.aocx";
+            builder.setTopologyKernelFile(aoclFile);//设置kernel本地可执行文件的路径 这个kernel必须是事先编译好的 提供kernel名称就可以了 去找
             String name = "FStormTestTopology"; //拓扑名称
 
             StormSubmitter.submitTopology(name,conf,builder.createTopology());

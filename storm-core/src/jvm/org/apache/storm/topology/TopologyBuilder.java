@@ -253,9 +253,13 @@ public class TopologyBuilder {
     /**
      * Set the kernel file as a String
      * @param file a kernel string or kernel file path
-     * @param type "FileString" or "FilePath"
      */
-    public void setTopologyKernelFile(String file,KernelFileArgumentType type)throws IOException{
+    public void setTopologyKernelFile(String file)throws IOException{
+        if(!file.endsWith(".aocx")){
+            throw new IllegalArgumentException("Kernel file type is illegal");
+        }
+        _kernelFileStr = file;
+/*
         switch(type){
             case FILESTRING:_kernelFileStr = file;
             case FILEPATH:
@@ -275,9 +279,10 @@ public class TopologyBuilder {
                 }catch(IOException e) {
                     throw new IOException("IOException while reading the kernel file:");
                 }
-           default:
-               throw new IllegalArgumentException("Kernel file type is illegal");
+            default:
+                throw new IllegalArgumentException("Kernel file type is illegal");
         }
+*/
     }
 
 
