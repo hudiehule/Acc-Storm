@@ -145,9 +145,9 @@ public class FStormTestTopology {
             TopologyBuilder builder = new TopologyBuilder();
 
             builder.setSpout("spout",new DataSpout(sleepTime),spoutNum);
-            builder.setBolt("split",new SplitBolt(),bolt1Num);
-            builder.setAccBolt("accbolt",new MapBolt(new Class[]{char.class}, new Class[]{int.class},batchSize,"compute")).shuffleGrouping("split");
-            builder.setBolt("view",new ViewBolt(),bolt2Num);
+            builder.setBolt("split",new SplitBolt(),bolt1Num).shuffleGrouping("spout");
+            builder.setAccBolt("compute",new MapBolt(new Class[]{char.class}, new Class[]{int.class},batchSize,"compute")).shuffleGrouping("split");
+            builder.setBolt("view",new ViewBolt(),bolt2Num).shuffleGrouping("compute");
 
             Config conf = new Config();
             conf.setNumWorkers(numWorkers);

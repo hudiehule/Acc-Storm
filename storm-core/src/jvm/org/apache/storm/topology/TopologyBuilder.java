@@ -226,7 +226,7 @@ public class TopologyBuilder {
      * @return use the returned object to declare the inputs to this component
      * @throws IllegalArgumentException
      */
-    public BoltDeclarer setAccBolt(String id,IRichBolt bolt,Number parallelism_hint) throws IllegalArgumentException{
+    private BoltDeclarer setAccGeneralBolt(String id,IRichBolt bolt,Number parallelism_hint) throws IllegalArgumentException{
         validateUnusedId(id);
         initCommon(id,bolt,parallelism_hint);
         _accGeneralBolts.put(id,bolt);
@@ -242,12 +242,12 @@ public class TopologyBuilder {
      */
     public BoltDeclarer setAccBolt(String id, BaseRichAccBolt bolt, Number parallelism_hint) throws IllegalArgumentException {
         _accBolts.put(id,bolt);
-        return setAccBolt(id,new AccBoltExecutor(bolt),parallelism_hint);
+        return setAccGeneralBolt(id,new AccBoltExecutor(bolt),parallelism_hint);
     }
 
     public BoltDeclarer setAccBolt(String id, BaseRichAccBolt bolt) throws IllegalArgumentException {
         _accBolts.put(id,bolt);
-        return setAccBolt(id,new AccBoltExecutor(bolt),1);
+        return setAccGeneralBolt(id,new AccBoltExecutor(bolt),1);
     }
 
     /**
