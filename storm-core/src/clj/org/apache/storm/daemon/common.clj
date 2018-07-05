@@ -123,6 +123,8 @@
 (defn- validate-ids! [^StormTopology topology]
   (let [sets (map #(.getFieldValue topology %) thrift/STORM-TOPOLOGY-FIELDS-EXECLUDE-ACCBOLT)
         offending (apply any-intersection sets)]
+    (doseq [f thrift/STORM-TOPOLOGY-FIELDS-EXECLUDE-ACCBOLT]
+            (log-message "field-name: " (.getFieldName f)))
     (if-not (empty? offending)
       (throw (InvalidTopologyException.
               (str "Duplicate component ids: " offending))))
