@@ -95,7 +95,7 @@
                                       false)) all-executors)                         ;;计算拓扑中定义好的acc-executors
         all-supervisorid-to-available-devices (into {} (.getAvailableFpgaDevices cluster))  ;;获取<supervisor-id,availableFpgaDeviceNumber>
         ;;获取具有可用的slots的supervisor
-        can-assign-supervisor-ids (keys (into {} (.getAvailableSlotsMap cluster)) )
+        can-assign-supervisor-ids (into {} (.getAvailableSlotsMap cluster))
         num-supervisors (count can-assign-supervisor-ids)
         can-assign-supervisor-id-to-available-devices (filter (fn [[k v]] (contains? can-assign-supervisor-ids k)) all-supervisorid-to-available-devices)
 
