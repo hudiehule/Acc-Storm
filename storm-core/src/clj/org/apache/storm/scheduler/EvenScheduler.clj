@@ -101,7 +101,7 @@
 
 
         all-available-slots (->> (.getAvailableSlots cluster)
-                             (map #(vector (.getNodeId %) (.getPort %))))
+                             (map #(vector (.getNodeId %) (.getPort %)))) ;;slots的形式是[supervisor-id, port]
         all-sorted-slots (sort-slots all-available-slots)
         alive-assigned (get-alive-assigned-node+port->executors cluster topology-id)
         alive-assigned-executors (set (apply concat (vals alive-assigned))) ;;这里的executor的形式是[start-task-id last-task-id]
@@ -131,7 +131,7 @@
         assign-supervisors-with-devices (set (keys assign-supervisor-id-to-available-devices))
         assign-slots-with-devices (set (filter #(contains? assign-supervisors-with-devices (first %)) new-assign-slots))
         sorted-slots-with-devices (sort-slots-with-devices assign-slots-with-devices all-supervisorid-to-available-devices)
-        assign-slots-without-devices (set/difference new-assign-slots assign-slots-with-devices)
+        assign-slots-without-devices (set/difference (set new-assign-slots) assign-slots-with-devices)
 
 
         reassign-acc-executors (sort #(compare (:start-task-id %1) (:start-task-id %2)) (filter #(not (contains? alive-assigned-executors [(:start-task-id %) (:last-task-id %)])) can-assign-acc-executors))
