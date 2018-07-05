@@ -129,7 +129,7 @@
 
 
         assign-supervisors-with-devices (set (keys assign-supervisor-id-to-available-devices))
-        assign-slots-with-devices (filter #(contains? assign-supervisors-with-devices (first %)) new-assign-slots)
+        assign-slots-with-devices (set (filter #(contains? assign-supervisors-with-devices (first %)) new-assign-slots))
         sorted-slots-with-devices (sort-slots-with-devices assign-slots-with-devices all-supervisorid-to-available-devices)
         assign-slots-without-devices (set/difference new-assign-slots assign-slots-with-devices)
 
