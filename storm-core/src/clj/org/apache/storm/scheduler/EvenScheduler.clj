@@ -102,7 +102,7 @@
 
         all-available-slots (->> (.getAvailableSlots cluster)
                              (map #(vector (.getNodeId %) (.getPort %))))
-        all-sorted-slots ((sort-slots all-available-slots))
+        all-sorted-slots (sort-slots all-available-slots)
         alive-assigned (get-alive-assigned-node+port->executors cluster topology-id)
         alive-assigned-executors (set (apply concat (vals alive-assigned))) ;;这里的executor的形式是[start-task-id last-task-id]
         total-slots-to-use (min (.getNumWorkers topology)   ;;计算可用的slots数量
