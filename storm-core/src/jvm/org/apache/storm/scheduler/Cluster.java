@@ -228,7 +228,7 @@ public class Cluster {
         int usedFpgaDevices = 0;
         for(SchedulerAssignment assignment :assignments.values()){
              for(Map.Entry<ExecutorDetails,WorkerSlot> entry :assignment.getExecutorToSlot().entrySet()){
-                 if(entry.getKey().isAccExecutor && entry.getValue().getNodeId().equals(supervisor.getId()))
+                 if(entry.getKey().isAssignedAccExecutor() && entry.getValue().getNodeId().equals(supervisor.getId()))
                      usedFpgaDevices++;
              }
         }
