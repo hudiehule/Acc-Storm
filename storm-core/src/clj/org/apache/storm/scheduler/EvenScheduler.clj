@@ -78,11 +78,10 @@
 ;;给有devices的slots排序
 (defn sort-slots-with-devices [slots-with-devices supervisorid-to-available-devices reassign-acc-executors]
   (let [group-slots-with-devices-by-id (group-by #(first %) slots-with-devices) ;;得到的是<suprvisor-id, slots的集合>这个map
-        group-sorted-slots-with-devices (into {} (for [[supervisor-id slot-seq] group-slots-with-devices-by-id
-                                                         device-num (get supervisorid-to-available-devices supervisor-id)]
-                                                   {supervisor-id (take device-num (repeat-seq device-num slot-seq))}))
-        split-up (sort-by count > (vals group-sorted-slots-with-devices))
-        ]
+        group-sorted-slots-with-devices (into {} (for [[supervisor-id slots] group-slots-with-devices-by-id
+                                                        :let [device-num (get supervisorid-to-available-devices supervisor-id)]]
+                                                   {supervisor-id (take device-num (repeat-seq device-num slots))}))
+        split-up (sort-by count > (vals group-sorted-slots-with-devices))]
     (apply interleave-all split-up)))
 
 ;;调度含有acc组件的topology
