@@ -45,54 +45,55 @@ public class TupleBuffers {
         int elementNum = tupleEleTypes.length;
         buffers = new TupleElementBuffer[elementNum];
        // sizeBytes = new int[elementNum];
+        types = new String[elementNum];
         for(int i = 0; i<elementNum;i++){
             String typeName = tupleEleTypes[i];
             switch(typeName){
                 case "int": {
                     buffers[i] = new TupleElementBuffer<Integer>(size,"int");
                     //sizeBytes[i] = size * 4;
-                    types[i] = "int";
+                    types[i] = new String("int");
                     break;
                 }  //**字节
                 case "boolean": {
                     buffers[i] = new TupleElementBuffer<Boolean>(size,"boolean");
                    // sizeBytes[i] = size * 1;
-                    types[i] = "boolean";
+                    types[i] = new String("boolean");
                     break;
                 }
                 case "short": {
                     buffers[i] = new TupleElementBuffer<Short>(size,"short");
                    // sizeBytes[i] = size * 2;
-                    types[i] = "short";
+                    types[i] = new String("short");
                     break;
                 }
                 case "byte": {
                     buffers[i] = new TupleElementBuffer<Byte>(size,"byte");
                    // sizeBytes[i] = size * 1;
-                    types[i] = "byte";
+                    types[i] = new String("byte");
                     break; }
                 case "float": {
                     buffers[i] = new TupleElementBuffer<Float>(size,"float");
                    // sizeBytes[i] = size * 4;
-                    types[i] = "float";
+                    types[i] = new String("float");
                     break;
                 }
                 case "double": {
                     buffers[i] = new TupleElementBuffer<Double>(size,"double");
                    // sizeBytes[i] = size * 8;
-                    types[i] = "double";
+                    types[i] = new String("double");
                     break;
                 }
                 case "long": {
                     buffers[i] = new TupleElementBuffer<Long>(size,"long");
                     //sizeBytes[i] = size * 8;
-                    types[i] = "long";
+                    types[i] = new String("long");
                     break;
                 }
                 case "char": {
                     buffers[i] = new TupleElementBuffer<Character>(size,"char");
                     //sizeBytes[i] = size * 1;
-                    types[i] = "char";
+                    types[i] = new String("char");
                     break;
                 }
             }

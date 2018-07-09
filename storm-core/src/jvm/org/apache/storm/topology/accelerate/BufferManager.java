@@ -11,28 +11,13 @@ public class BufferManager {
     private NativeBufferManager nativeBufferManager;
     private TupleBuffers inputBuffer = null;
     private TupleBuffers outputBuffer = null;
-    private int inputAndOutputFlagShmid;
-    // private int[] inputBufferShmids;
-    private int[] inputBufferShmids; //保存每个inputBuffer对应的共享内存数组的key 需要传送给Native OpenCL Host端
-    private int[] outputBufferShmids;
     public BufferManager(TupleBuffers inputBuffer,TupleBuffers outputBuffer){
         this.inputBuffer = inputBuffer;
         this.outputBuffer = outputBuffer;
         this.nativeBufferManager = new NativeBufferManager();
-        inputBufferShmids = new int[inputBuffer.size];
-        outputBufferShmids = new int[outputBuffer.size];
         //  建立native共享内存 对input和output都要建立 并且建立一个共享存储区 存放flag变量
         //  NativeBufferManager.shmGet(inputBuffer.size);
         initialShm();
-    }
-
-    /**
-     * 为每个共享内存数组生成一个key，它是shmget函数的第一个参数
-     * @param inputKeyArr
-     * @param outputKeyArr
-     */
-    private void generateShmKeys(int[] inputKeyArr,int[] outputKeyArr){
-
     }
 
     /**

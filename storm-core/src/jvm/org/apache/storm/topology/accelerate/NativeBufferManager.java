@@ -28,6 +28,8 @@ public class NativeBufferManager {
     public void crateSharedMemory(int size,String[] inputTupleEleTypes,String[] outputTupleEleTypes){
         int inputShmNum = inputTupleEleTypes.length;
         int outputShmNum = outputTupleEleTypes.length;
+        inputShmid = new int[inputShmNum];
+        outputShmid = new int[outputShmNum];
         for(int i = 0; i<inputShmNum;i++){
             inputShmid[i] = shmGet(size,inputTupleEleTypes[i]);
         }
