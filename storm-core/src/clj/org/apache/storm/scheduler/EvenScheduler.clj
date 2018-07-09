@@ -80,7 +80,7 @@
   (let [group-slots-with-devices-by-id (group-by #(first %) slots-with-devices) ;;得到的是<suprvisor-id, slots的集合>这个map
         group-sorted-slots-with-devices (into {} (for [[supervisor-id slot-seq] group-slots-with-devices-by-id
                                                          device-num (get supervisorid-to-available-devices supervisor-id)]
-                                                   {supervisor-id (take device-num (repeat-seq device-num seq))}))
+                                                   {supervisor-id (take device-num (repeat-seq device-num slot-seq))}))
         split-up (sort-by count > (vals group-sorted-slots-with-devices))
         ]
     (apply interleave-all split-up)))
