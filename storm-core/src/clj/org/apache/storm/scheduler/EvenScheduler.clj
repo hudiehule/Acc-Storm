@@ -78,9 +78,9 @@
 ;;给有devices的slots排序
 (defn sort-slots-with-devices [slots-with-devices supervisorid-to-available-devices reassign-acc-executors]
   (let [group-slots-with-devices-by-id (group-by #(first %) slots-with-devices) ;;得到的是<suprvisor-id, slots的集合>这个map
-        group-sorted-slots-with-devices (map (fn [[k seq]]
-                                         (let [devices-num (get supervisorid-to-available-devices k)]
-                                           [k (take devices-num (repeat-seq devices-num seq))])) group-slots-with-devices-by-id)
+        group-sorted-slots-with-devices (into {} (for [[supervisor-id slot-seq] group-slots-with-devices-by-id
+                                                         device-num (get supervisorid-to-available-devices supervisor-id)]
+                                                   {supervisor-id (take device-num (repeat-seq devices-num seq))}))
         split-up (sort-by count > (vals group-sorted-slots-with-devices))
         ]
     (apply interleave-all split-up)))
