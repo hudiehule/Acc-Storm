@@ -44,7 +44,7 @@ JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
              exit(EXIT_FAILURE);
          }
          if(strcmp(data_type_str,INPUT_AND_OUTPUT_FLAG_TYPE) == 0){
-              data_type_size = sizeof(struct shared_flag);
+              data_type_size = sizeof(struct shared_data_flag);
          }else if(strcmp(data_type_str,INTTYPE) == 0){
              data_type_size = sizeof(int);
          }else if(strcmp(data_type_str,SHORTTYPE) == 0){
@@ -77,7 +77,7 @@ JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
              data_flag->input_flag = INPUT_DATA_CONSUMED;
              data_flag->output_flag = OUTPUT_DATA_CONSUMED;
              if(shmdt(shared_memory) == -1){
-                fprinf(stderr,"shmdt failed\n");
+                fprintf(stderr,"shmdt failed\n");
                 env->ReleaseStringUTFChars(data_type,data_type_str);
                 exit(EXIT_FAILURE);
              }
@@ -452,7 +452,7 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
         void * shared_memory = shmat(shmid,(void *)0,0);
         struct shared_data_flag * shared_data_flag = (struct shared_data_flag *)shared_memory;
         while(shared_data_flag->output_flag != OUTPUT_DATA_READY){ }
-        shraed_data_flag->input_flag = INPUT_DATA_NOT_READY;
+        shared_data_flag->input_flag = INPUT_DATA_NOT_READY;
         if(shmdt(shared_memory) == -1){
              fprintf(stderr,"shmdt failed\n");
              exit(EXIT_FAILURE);
