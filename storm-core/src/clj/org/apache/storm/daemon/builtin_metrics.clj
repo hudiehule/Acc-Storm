@@ -49,6 +49,13 @@
                                (stats-executed stats)
                                (stats-execute-latencies stats)
                                (stats-emitted stats)
+                               (stats-transferred stats))
+    :accBolt (BuiltinBoltMetrics. (stats-acked stats)
+                               (stats-process-latencies stats)
+                               (stats-failed stats)
+                               (stats-executed stats)
+                               (stats-execute-latencies stats)
+                               (stats-emitted stats)
                                (stats-transferred stats))))
 
 (defn make-spout-throttling-data []
