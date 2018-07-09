@@ -68,7 +68,7 @@ JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
          }
          jint shmid = shmget(IPC_PRIVATE,data_type_size * size,0666|IPC_CREAT);
          if(shmid == -1){
-             fprintf(stderr,"shmget failed! info: %s\n",sterror(errno));
+             fprintf(stderr,"shmget failed! info: %s\n",strerror(errno));
              exit(EXIT_FAILURE);
          }
          // 初始化data_flag的值
