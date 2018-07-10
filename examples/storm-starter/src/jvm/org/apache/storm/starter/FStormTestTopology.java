@@ -154,8 +154,8 @@ public class FStormTestTopology {
             conf.setNumAckers(numAckers);
             conf.setDebug(true);
 
-            String aoclFile = "compute.aocx";
-            builder.setTopologyKernelFile(aoclFile);//设置kernel本地可执行文件的路径 这个kernel必须是事先编译好的 提供kernel名称就可以了 去找
+            String aoclFileName = "compute";
+            builder.setTopologyKernelFile(aoclFileName);//设置kernel本地可执行文件的路径 这个kernel必须是事先编译好的 提供kernel名称就可以了 去找
             String name = "FStormTestTopology"; //拓扑名称
 
             StormSubmitter.submitTopology(name,conf,builder.createTopology());
