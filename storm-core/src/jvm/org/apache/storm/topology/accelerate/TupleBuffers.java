@@ -42,6 +42,7 @@ public class TupleBuffers {
     public String[] types;
  //   public int[] sizeBytes; //每个缓冲区的所占内存空间大小 建立共享内存时需要
     public TupleBuffers(String[] tupleEleTypes,int size){
+        this.size = size;
         int elementNum = tupleEleTypes.length;
         buffers = new TupleElementBuffer[elementNum];
        // sizeBytes = new int[elementNum];
