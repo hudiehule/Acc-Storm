@@ -7,6 +7,8 @@ import org.apache.storm.topology.base.BaseComponent;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.apache.storm.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 import java.util.*;
@@ -19,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 
 public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccBolt{
+    private static final Logger LOG = LoggerFactory.getLogger(BaseRichAccBolt.class);
     private transient OutputCollector accCollector;
     private static int DEFAULT_BATCH_SIZE = 200;
     private int batchSize;
@@ -103,13 +106,15 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         //建立到OpenCL Host端的sock连接
         this.connection = new ComponentConnectionToNative(Utils.getInt(stormConf.get(Config.OCL_NATIVE_PORT)));
         //发送消息给nativeMachine 启动一个program 建立一个FPGA command，并且阻塞等待一个ack返回
+        LOG.info("send initial opencl program info");
         connection.sendInitialOpenCLProgramRequest(exeKernelFile,kernelFunctionName,batchSize,
                 inputTupleEleTypes,bufferManager.getInputBufferShmids(),outputTupleEleTypes,bufferManager.getOutputBufferShmids(),bufferManager.getInputAndOutputFlagShmid());
-
+        LOG.info("get the ack from the native");
         this.waitingForResultsThread = new WaitingForResults(collector);
         waitingForResultsThread.setName("waitingForResultsThread");
         this.waiting = new AtomicBoolean(false);
         waitingForResultsThread.start();
+        LOG.info("acc prepare accomplished");
     }
 
 

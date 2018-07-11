@@ -36,38 +36,20 @@ public class ComponentConnectionToNative {
                                       int batchSize,String[] inputDataTypes,int[] inShmids,String[] outputDataTypes,int[] outShmids,int shmFlagid){
         String message = Messages.constructStartOpenCLRuntimeMsg(exeKernelFile,kernelFunctionName,batchSize,inputDataTypes,inShmids,outputDataTypes,outShmids,shmFlagid);
         serializeAndSendString(message);
-        return waitingForResult(); // 需要修改
+        boolean res = waitingForResult();
+        return res;
     }
 
- /*   public void cleanupOpenCLProgram(String exeKernelFile,String kernelFunctionName){
-        serializeAndSendString(Messages.STOP_KERNEL_RUNNING);
-    }*/
-
-
-   /* public void startKernel(String exeKernelFile,String kernelFunctionName,int batchSize,int[] inShmids,int[] outShmids){
-        StringBuilder message = new StringBuilder("startKernel_").append(exeKernelFile).append("_").append(kernelFunctionName).append("_").append(String.valueOf(batchSize));
-        message.append("$");
-        for(int i = 0;i<inShmids.length;i++){
-            message.append("_").append(inShmids[i]);
-        }
-        message.append("$");
-        for(int i = 0;i<outShmids.length;i++){
-            message.append("_").append(outShmids[i]);
-        }
-        serializeAndSendString(message.toString());
-    }*/
 
     public boolean waitingForResult(){
         try {
-            while (true) {
-                // readLine是一个阻塞函数，当没有数据读取时，就一直会阻塞在那里，而不是返回null,并且只有遇到'/r','/n'或者“/r/n”才会返回
-                String recvMsg = reader.readLine();
-                if ( recvMsg != Messages.START_OPENCL_RUNTIME_ACK) {
-                    // Connection lost
-                    return false;
-                }
-                return true;
+            // readLine是一个阻塞函数，当没有数据读取时，就一直会阻塞在那里，而不是返回null,并且只有遇到'/r','/n'或者“/r/n”才会返回
+            String recvMsg = reader.readLine();
+            if ( recvMsg != Messages.START_OPENCL_RUNTIME_ACK) {
+                // Connection lost
+                return false;
             }
+            return true;
         }catch(Exception e) {
             e.printStackTrace();
             return false;
