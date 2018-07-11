@@ -822,12 +822,7 @@
         spouts (.get_spouts topology)]
     (cond
       (Utils/isSystemId id) :bolt
-      (.containsKey bolts id) (let [^Bolt bolt (get bolts id)
-                                       isAccBolt (.is_isAccBolt bolt)]
-                                (if isAccBolt
-                                  :accBolt
-                                  :bolt)
-                                )
+      (.containsKey bolts id) :bolt
       (.containsKey spouts id) :spout)))
 
 (defn extract-nodeinfos-from-hb-for-comp

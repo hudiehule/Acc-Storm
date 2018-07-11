@@ -152,7 +152,6 @@ public class FStormTestTopology {
             Config conf = new Config();
             conf.setNumWorkers(numWorkers);
             conf.setNumAckers(numAckers);
-            conf.setDebug(true);
 
             String aoclFileName = "compute";
             builder.setTopologyKernelFile(aoclFileName);//设置kernel本地可执行文件的路径 这个kernel必须是事先编译好的 提供kernel名称就可以了 去找
