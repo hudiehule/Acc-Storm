@@ -1,7 +1,11 @@
 package org.apache.storm.topology.accelerate;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 
@@ -9,6 +13,7 @@ import java.net.Socket;
  * Created by Administrator on 2018/5/15.
  */
 public class ComponentConnectionToNative {
+    private static final Logger LOG = LoggerFactory.getLogger(ComponentConnectionToNative.class);
     private Socket conn = null; //怎样获取native machine的port
     private BufferedOutputStream out = null;
     private BufferedReader reader = null;
@@ -32,23 +37,46 @@ public class ComponentConnectionToNative {
      * @param exeKernelFile the file name of the executable kernel file
      * @param kernelFunctionName the kernel function name of this component
      */
-    public boolean sendInitialOpenCLProgramRequest(String exeKernelFile,String kernelFunctionName,
+    public void sendInitialOpenCLProgramRequest(String exeKernelFile,String kernelFunctionName,
                                       int batchSize,String[] inputDataTypes,int[] inShmids,String[] outputDataTypes,int[] outShmids,int shmFlagid){
         String message = Messages.constructStartOpenCLRuntimeMsg(exeKernelFile,kernelFunctionName,batchSize,inputDataTypes,inShmids,outputDataTypes,outShmids,shmFlagid);
-        serializeAndSendString(message);
-        boolean res = waitingForResult();
-        return res;
+        try{
+            byte[] b = message.getBytes();
+            out.write(b);
+            out.flush();
+        }catch(Exception e){
+            LOG.error(e.getMessage());
+            e.printStackTrace();
+        }
+        try {
+            // readLine是一个阻塞函数，当没有数据读取时，就一直会阻塞在那里，而不是返回null,并且只有遇到'/r','/n'或者“/r/n”才会返回
+            LOG.info("waiting for start opencl runtime ack");
+            String recvMsg = reader.readLine();
+            if ( recvMsg == null ) {
+                throw new IOException("connection lost");
+            }else if( !recvMsg.equals(Messages.START_OPENCL_RUNTIME_ACK)){
+                LOG.info("get the message: " + recvMsg);
+                throw new IOException("recviced unknown messages");
+            }
+            LOG.info("get the message: " + recvMsg);
+        }catch(Exception e) {
+            LOG.error(e.getMessage());
+            e.printStackTrace();
+        }
+
     }
 
 
     public boolean waitingForResult(){
         try {
             // readLine是一个阻塞函数，当没有数据读取时，就一直会阻塞在那里，而不是返回null,并且只有遇到'/r','/n'或者“/r/n”才会返回
+            LOG.info("waiting for start opencl runtime ack");
             String recvMsg = reader.readLine();
-            if ( recvMsg != Messages.START_OPENCL_RUNTIME_ACK) {
+            if ( !recvMsg.equals(Messages.START_OPENCL_RUNTIME_ACK)) {
                 // Connection lost
                 return false;
             }
+            LOG.info("get the message: " + recvMsg);
             return true;
         }catch(Exception e) {
             e.printStackTrace();
