@@ -80,7 +80,7 @@ public class NativeBufferManager {
                 case "int": {
                     int[] temp = new int[size];
                     for(int j = 0;j< size;j++){
-                        temp[i] = (int)(buffers.buffers[i].get(j));
+                        temp[j] = (int)(buffers.buffers[i].get(j));
                     }
                     putIntToNativeShm(inputShmid[i],temp,size);
                     break;
@@ -88,7 +88,7 @@ public class NativeBufferManager {
                 case "boolean": {
                     boolean[] temp = new boolean[size];
                     for(int j = 0;j< size;j++){
-                        temp[i] = (boolean)(buffers.buffers[i].get(j));
+                        temp[j] = (boolean)(buffers.buffers[i].get(j));
                     }
                     putBooleanToNativeShm(inputShmid[i],temp,size);
                     break;
@@ -96,7 +96,7 @@ public class NativeBufferManager {
                 case "short": {
                     short[] temp = new short[size];
                     for(int j = 0;j< size;j++){
-                        temp[i] = (short)(buffers.buffers[i].get(j));
+                        temp[j] = (short)(buffers.buffers[i].get(j));
                     }
                     putShortToNativeShm(inputShmid[i],temp,size);
                     break;
@@ -104,7 +104,7 @@ public class NativeBufferManager {
                 case "byte": {
                     byte[] temp = new byte[size];
                     for(int j = 0;j< size;j++){
-                        temp[i] = (byte)(buffers.buffers[i].get(j));
+                        temp[j] = (byte)(buffers.buffers[i].get(j));
                     }
                     putByteToNativeShm(inputShmid[i],temp,size);
                     break;
@@ -112,7 +112,7 @@ public class NativeBufferManager {
                 case "float": {
                     float[] temp = new float[size];
                     for(int j = 0;j< size;j++){
-                        temp[i] = (float)(buffers.buffers[i].get(j));
+                        temp[j] = (float)(buffers.buffers[i].get(j));
                     }
                     putFloatToNativeShm(inputShmid[i],temp,size);
                     break;
@@ -120,7 +120,7 @@ public class NativeBufferManager {
                 case "double": {
                     double[] temp = new double[size];
                     for(int j = 0;j< size;j++){
-                        temp[i] = (double)(buffers.buffers[i].get(j));
+                        temp[j] = (double)(buffers.buffers[i].get(j));
                     }
                     putDoubleToNativeShm(inputShmid[i],temp,size);
                     break;
@@ -128,7 +128,7 @@ public class NativeBufferManager {
                 case "long": {
                     long[] temp = new long[size];
                     for(int j = 0;j< size;j++){
-                        temp[i] = (long)(buffers.buffers[i].get(j));
+                        temp[j] = (long)(buffers.buffers[i].get(j));
                     }
                     putLongToNativeShm(inputShmid[i],temp,size);
                     break;
@@ -136,7 +136,7 @@ public class NativeBufferManager {
                 case "char": {
                     char[] temp = new char[size];
                     for(int j = 0;j< size;j++){
-                        temp[i] = (char)(buffers.buffers[i].get(j));
+                        temp[j] = (char)(buffers.buffers[i].get(j));
                     }
                     putCharToNativeShm(inputShmid[i],temp,size);
                     break;
