@@ -20,7 +20,7 @@ public class ComponentConnectionToNative {
     public boolean isConnected = false;
     public ComponentConnectionToNative(int port){
         try{
-            conn = new Socket("localhost",port);conn.setTcpNoDelay(true);
+            conn = new Socket("localhost",port);
             conn.setTcpNoDelay(true);
             isConnected = true;
             out = new BufferedOutputStream(conn.getOutputStream());
@@ -48,7 +48,7 @@ public class ComponentConnectionToNative {
             LOG.error(e.getMessage());
             e.printStackTrace();
         }
-        try {
+       /* try {
             // readLine是一个阻塞函数，当没有数据读取时，就一直会阻塞在那里，而不是返回null,并且只有遇到'/r','/n'或者“/r/n”才会返回
             LOG.info("waiting for start opencl runtime ack");
             String recvMsg = reader.readLine();
@@ -62,7 +62,7 @@ public class ComponentConnectionToNative {
         }catch(Exception e) {
             LOG.error(e.getMessage());
             e.printStackTrace();
-        }
+        }*/
 
     }
 
