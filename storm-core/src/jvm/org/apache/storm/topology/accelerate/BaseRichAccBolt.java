@@ -158,6 +158,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             等待计算结果？阻塞？不应该阻塞？
              */
         }
+        LOG.info("put tuple to buffer: " + input);
         bufferManager.putInputTupleToBuffer(input); //缓冲未满则直接将数据放入缓冲区
         accCollector.ack(input);
     }

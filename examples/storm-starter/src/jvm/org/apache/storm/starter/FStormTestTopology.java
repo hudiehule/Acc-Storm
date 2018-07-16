@@ -130,7 +130,7 @@ public class FStormTestTopology {
         }
     }
     public static void main(String[] args) throws Exception{
-        if(args == null ||args.length <7){
+        if(args == null ||args.length <8){
             System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers sleepTime batchSize");
         }else{
             int spoutNum = Integer.valueOf(args[0]);
@@ -142,6 +142,7 @@ public class FStormTestTopology {
 
             int sleepTime = Integer.valueOf(args[5]);
             int batchSize = Integer.valueOf(args[6]);
+            boolean isDebug = Boolean.valueOf(args[7]);
             TopologyBuilder builder = new TopologyBuilder();
 
             builder.setSpout("spout",new DataSpout(sleepTime),spoutNum);
@@ -152,6 +153,7 @@ public class FStormTestTopology {
             Config conf = new Config();
             conf.setNumWorkers(numWorkers);
             conf.setNumAckers(numAckers);
+            conf.setDebug(isDebug);
 
             String aoclFileName = "compute";
             builder.setTopologyKernelFile(aoclFileName);//设置kernel本地可执行文件的路径 这个kernel必须是事先编译好的 提供kernel名称就可以了 去找
