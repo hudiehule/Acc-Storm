@@ -82,7 +82,7 @@ public class FStormTestTopology {
             String sentence = tuple.getString(0);
             char[] ch = sentence.toCharArray();
             for (char ele : ch) {
-                if(ele != ' ') _collector.emit(tuple,new Values(ch));
+                if(ele != ' ') _collector.emit(tuple,new Values(ele));
             }
             _collector.ack(tuple);
         }
