@@ -145,6 +145,7 @@ public class NativeBufferManager {
         }
         //设置input flag 为1 表示共享内存的数据已经准备好 内核可以进行计算了
         setInputDataReady(shmFlagid);
+        LOG.info("accomplish transfering input data to native");
     }
 
     public void waitAndPollOutputTupleEleFromShm(int size,TupleBuffers buffers){
