@@ -33,7 +33,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
  //   private volatile boolean lastBatchFinished = true;
     private ComponentConnectionToNative connection;
     private WaitingForResults waitingForResultsThread;
-    private AtomicBoolean waiting;
+//    private AtomicBoolean waiting;
     class WaitingForResults extends Thread{
         OutputCollector collector;
         volatile boolean listenning;
@@ -44,7 +44,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         }
         public void run(){
             while(listenning){
-                if(waiting.get() == true){
+          //      if(waiting.get() == true){
                   //  boolean batchResultReturned = conn.waitingForResult(); // 阻塞函数等待这一批tuple计算完成
                         bufferManager.waitAndPollOutputTupleEleFromShm();
                         long batchNativeTime = System.nanoTime() - batchStartTime;
@@ -54,14 +54,14 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
                         }
                     //    lastBatchFinished = true;
                     System.out.println("batch time : " + batchNativeTime);
-                    waiting.compareAndSet(true,false);
-                }
+            //        waiting.compareAndSet(true,false);
+            //    }
             }
         }
 
-        public void running(long startTime){
+        public void setBatchStartTime(long startTime){
             batchStartTime = startTime;
-            waiting.compareAndSet(false,true);
+        //    waiting.compareAndSet(false,true);
         }
         public void shutdown(){
             this.listenning = false;
@@ -112,7 +112,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         LOG.info("get the ack from the native");
         this.waitingForResultsThread = new WaitingForResults(collector);
         waitingForResultsThread.setName("waitingForResultsThread");
-        this.waiting = new AtomicBoolean(false);
+      //  this.waiting = new AtomicBoolean(false);
         waitingForResultsThread.start();
         LOG.info("acc prepare accomplished");
     }
@@ -145,7 +145,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             // 此时有线程等待OpenCL Host将结果回传给这个executor 传回以后这个线程使用collector.emit一条条发送给下游，完成以后将lastBatchFinished置为true
 
             // 设置waiting为true唤醒waitingForResult线程继续执行 等待OpenCL执行完kernel将结果传回来 并组装成tuple发送到下游
-            waitingForResultsThread.running(batchStartTime);
+            waitingForResultsThread.setBatchStartTime(batchStartTime);
             /*
             在发送之前先检查上一批是否结果已经返回，如果已经返回，利用jni将数据发送到native共享内存；返回后表示数据发送成功 立即将缓冲区清空 可以接收下一批数据
             如果没有返回 则等待上一批数据处理完；

@@ -165,7 +165,7 @@ public class FStormTestTopology {
             clusterConf.putAll(Utils.readCommandLineOpts());
             Nimbus.Client client = NimbusClient.getConfiguredClient(clusterConf).getClient();
 
-            Thread.sleep(60*1000); //运行十分钟
+            Thread.sleep(600*1000); //运行十分钟
             //kill the topology
             KillOptions opts = new KillOptions();
             opts.set_wait_secs(0);
