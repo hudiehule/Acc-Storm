@@ -437,7 +437,7 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
          void * shared_memory = shmat(shmid,(void *)0,0);
          struct shared_data_flag * shared_data_flag = (struct shared_data_flag *)shared_memory;
          shared_data_flag->input_flag = INPUT_DATA_READY;
-         fprintf(stdout,"input_data_flag = %d\n",shared_data_flag->input_flag);
+         fprintf(stdout,"Set the input_data_flag, After set, input_data_flag = %d\n",shared_data_flag->input_flag);
          if(shmdt(shared_memory) == -1){
               fprintf(stderr,"shmdt failed\n");
               exit(EXIT_FAILURE);
@@ -476,6 +476,7 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
         void * shared_memory = shmat(shmid,(void *)0,0);
         struct shared_data_flag * shared_data_flag = (struct shared_data_flag *)shared_memory;
         shared_data_flag->output_flag = OUTPUT_DATA_CONSUMED;
+        fprintf(stdout,"Set output_data_flag, After set ,output_data_flag = %d\n",shared_data_flag->output_flag);
         if(shmdt(shared_memory) == -1){
              fprintf(stderr,"shmdt failed\n");
              exit(EXIT_FAILURE);
