@@ -455,11 +455,12 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
         struct shared_data_flag * shared_data_flag = (struct shared_data_flag *)shared_memory;
         while(true){
              int output_flag = shared_data_flag->output_flag;
+             fprintf(stdout,"output_data_flag = %d\n",shared_data_flag->output_flag);
              if(output_flag == OUTPUT_DATA_READY){
                    break;
              }
         }
-        fprintf(stdout,"output_data_flag = %d\n",shared_data_flag->output_flag);
+//        fprintf(stdout,"output_data_flag = %d\n",shared_data_flag->output_flag);
         if(shmdt(shared_memory) == -1){
              fprintf(stderr,"shmdt failed\n");
              exit(EXIT_FAILURE);

@@ -33,7 +33,8 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
  //   private volatile boolean lastBatchFinished = true;
     private ComponentConnectionToNative connection;
     private WaitingForResults waitingForResultsThread;
-//    private AtomicBoolean waiting;
+    private AtomicBoolean waiting;
+    private long batchCount = 0;
     class WaitingForResults extends Thread{
         OutputCollector collector;
         volatile boolean listenning;
@@ -53,7 +54,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
                             collector.emit(values[i]);
                         }
                     //    lastBatchFinished = true;
-                    System.out.println("batch time : " + batchNativeTime);
+                    System.out.println("get result from openclHost, batch time : " + batchNativeTime);
             //        waiting.compareAndSet(true,false);
             //    }
             }
@@ -112,6 +113,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         LOG.info("get the ack from the native");
         this.waitingForResultsThread = new WaitingForResults(collector);
         waitingForResultsThread.setName("waitingForResultsThread");
+        waitingForResultsThread.setDaemon(true);
       //  this.waiting = new AtomicBoolean(false);
         waitingForResultsThread.start();
         LOG.info("acc prepare accomplished");
@@ -139,9 +141,15 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             /*while(!lastBatchFinished){ //当上一批的结果还未返回时 持续进行检查 此处阻塞
             }*/
             long batchStartTime = System.nanoTime(); // 一个batch开始计算
+            LOG.info("start batch " + batchCount++);
             // 将每一个缓冲区的数据发送到共享内存中，发送完成以后将缓冲区清空 将缓冲区的isFull置为false 发送完成以后将共享存储中的inputflag的值设为1 表示数据准备好 kernel可以运行了
             bufferManager.pushInputTuplesFromBufferToShmAndStartKernel(); //如果上一批数据还没被消费 将会等待在这里 阻塞函数
-
+            LOG.info("the waitingForResultsThread is alive: "+ waitingForResultsThread.isAlive() + "its state: "+ waitingForResultsThread.getState());
+            LOG.info("the stackTrace:");
+            StackTraceElement[] stackTraceElements = waitingForResultsThread.getStackTrace();
+            for(StackTraceElement e : stackTraceElements){
+                LOG.info(e.toString());
+            }
             // 此时有线程等待OpenCL Host将结果回传给这个executor 传回以后这个线程使用collector.emit一条条发送给下游，完成以后将lastBatchFinished置为true
 
             // 设置waiting为true唤醒waitingForResult线程继续执行 等待OpenCL执行完kernel将结果传回来 并组装成tuple发送到下游
@@ -158,7 +166,6 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             等待计算结果？阻塞？不应该阻塞？
              */
         }
-        LOG.info("put tuple to buffer: " + input);
         bufferManager.putInputTupleToBuffer(input); //缓冲未满则直接将数据放入缓冲区
         accCollector.ack(input);
     }
