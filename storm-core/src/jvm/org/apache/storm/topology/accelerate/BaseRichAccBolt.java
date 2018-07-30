@@ -44,19 +44,14 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             this.listenning = true;
         }
         public void run(){
-            while(listenning){
-          //      if(waiting.get() == true){
-                  //  boolean batchResultReturned = conn.waitingForResult(); // 阻塞函数等待这一批tuple计算完成
-                        bufferManager.waitAndPollOutputTupleEleFromShm();
-                        long batchNativeTime = System.nanoTime() - batchStartTime;
-                        Values[] values = bufferManager.constructOutputData();
-                        for(int i = 0;i<values.length;i++){
-                            collector.emit(values[i]);
-                        }
-                    //    lastBatchFinished = true;
-                    System.out.println("get result from openclHost, batch time : " + batchNativeTime);
-            //        waiting.compareAndSet(true,false);
-            //    }
+            while(listenning && !Thread.currentThread().isInterrupted()){
+                bufferManager.waitAndPollOutputTupleEleFromShm();
+                long batchNativeTime = System.nanoTime() - batchStartTime;
+                Values[] values = bufferManager.constructOutputData();
+                for(int i = 0;i<values.length;i++){
+                    collector.emit(values[i]);
+                }
+                System.out.println("get result from openclHost, batch time : " + batchNativeTime);
             }
         }
 
@@ -65,6 +60,8 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         //    waiting.compareAndSet(false,true);
         }
         public void shutdown(){
+            LOG.info("the state of the thread: " + this.getState());
+            LOG.info("listening = " + this.listenning);
             this.listenning = false;
         }
     }
@@ -129,6 +126,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     public void accCleanup(){
         //发送消息给nativeMachine  将这个bolt对应的FPGA 的opencl资源都清除
       //  connection.cleanupOpenCLProgram(exeKernelFile,kernelFunctionName);
+        LOG.info("close the baseRichAccBolt");
         cleanpOpenCLProgram(); // 通过设置共享内存中input flag的值为-1 表示这个kernel可以停止运行了 native将会清理资源 包括清理共享内存的资源
         waitingForResultsThread.shutdown(); //关闭线程
         connection.close(); // 关闭socket连接
@@ -144,7 +142,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             LOG.info("start batch " + batchCount++);
             // 将每一个缓冲区的数据发送到共享内存中，发送完成以后将缓冲区清空 将缓冲区的isFull置为false 发送完成以后将共享存储中的inputflag的值设为1 表示数据准备好 kernel可以运行了
             bufferManager.pushInputTuplesFromBufferToShmAndStartKernel(); //如果上一批数据还没被消费 将会等待在这里 阻塞函数
-            LOG.info("the waitingForResultsThread is alive: "+ waitingForResultsThread.isAlive() + "its state: "+ waitingForResultsThread.getState());
+            LOG.info("the waitingForResultsThread is alive: "+ waitingForResultsThread.isAlive() + ", its state: "+ waitingForResultsThread.getState());
             LOG.info("the stackTrace:");
             StackTraceElement[] stackTraceElements = waitingForResultsThread.getStackTrace();
             for(StackTraceElement e : stackTraceElements){
