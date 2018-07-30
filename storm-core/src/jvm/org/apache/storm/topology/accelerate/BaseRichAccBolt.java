@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 
 
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -32,10 +34,27 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     private BufferManager bufferManager = null;
  //   private volatile boolean lastBatchFinished = true;
     private ComponentConnectionToNative connection;
-    private WaitingForResults waitingForResultsThread;
+    private ExecutorService threadPool;
+//    private WaitingForResults waitingForResultsThread;
     private AtomicBoolean waiting;
     private long batchCount = 0;
-    class WaitingForResults extends Thread{
+    class GettingResultsTask implements Runnable{
+        private long batchStartTime;
+        public GettingResultsTask(long startTime){
+            batchStartTime = startTime;
+        }
+        @Override
+        public void run() {
+            bufferManager.waitAndPollOutputTupleEleFromShm();
+            long batchNativeTime = System.nanoTime() - batchStartTime;
+            Values[] values = bufferManager.constructOutputData();
+            for(int i = 0;i<values.length;i++){
+                accCollector.emit(values[i]);
+            }
+            System.out.println("get result from openclHost, batch time : " + batchNativeTime);
+        }
+    }
+    /*class WaitingForResults extends Thread{
         OutputCollector collector;
         volatile boolean listenning;
         long batchStartTime;
@@ -64,7 +83,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             LOG.info("listening = " + this.listenning);
             this.listenning = false;
         }
-    }
+    }*/
 
     public String[] getTypeName(Class[] dataTypes){
         String[] names = new String[dataTypes.length];
@@ -108,11 +127,12 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         connection.sendInitialOpenCLProgramRequest(exeKernelFile,kernelFunctionName,batchSize,
                 inputTupleEleTypes,bufferManager.getInputBufferShmids(),outputTupleEleTypes,bufferManager.getOutputBufferShmids(),bufferManager.getInputAndOutputFlagShmid());
         LOG.info("get the ack from the native");
-        this.waitingForResultsThread = new WaitingForResults(collector);
+        this.threadPool = Executors.newSingleThreadExecutor();
+        /*this.waitingForResultsThread = new WaitingForResults(collector);
         waitingForResultsThread.setName("waitingForResultsThread");
         waitingForResultsThread.setDaemon(true);
       //  this.waiting = new AtomicBoolean(false);
-        waitingForResultsThread.start();
+        waitingForResultsThread.start();*/
         LOG.info("acc prepare accomplished");
     }
 
@@ -126,9 +146,10 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     public void accCleanup(){
         //发送消息给nativeMachine  将这个bolt对应的FPGA 的opencl资源都清除
       //  connection.cleanupOpenCLProgram(exeKernelFile,kernelFunctionName);
-        LOG.info("close the baseRichAccBolt");
+        LOG.info("close the BaseRichAccBolt");
         cleanpOpenCLProgram(); // 通过设置共享内存中input flag的值为-1 表示这个kernel可以停止运行了 native将会清理资源 包括清理共享内存的资源
-        waitingForResultsThread.shutdown(); //关闭线程
+        threadPool.shutdown();
+        //waitingForResultsThread.shutdown(); //关闭线程
         connection.close(); // 关闭socket连接
  //     bufferManager.clearShm(); // 清理共享内存
     }
@@ -142,16 +163,18 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             LOG.info("start batch " + batchCount++);
             // 将每一个缓冲区的数据发送到共享内存中，发送完成以后将缓冲区清空 将缓冲区的isFull置为false 发送完成以后将共享存储中的inputflag的值设为1 表示数据准备好 kernel可以运行了
             bufferManager.pushInputTuplesFromBufferToShmAndStartKernel(); //如果上一批数据还没被消费 将会等待在这里 阻塞函数
-            LOG.info("the waitingForResultsThread is alive: "+ waitingForResultsThread.isAlive() + ", its state: "+ waitingForResultsThread.getState());
+
+            threadPool.execute(new GettingResultsTask(batchStartTime));
+            /*LOG.info("the waitingForResultsThread is alive: "+ waitingForResultsThread.isAlive() + ", its state: "+ waitingForResultsThread.getState());
             LOG.info("the stackTrace:");
             StackTraceElement[] stackTraceElements = waitingForResultsThread.getStackTrace();
             for(StackTraceElement e : stackTraceElements){
                 LOG.info(e.toString());
-            }
+            }*/
             // 此时有线程等待OpenCL Host将结果回传给这个executor 传回以后这个线程使用collector.emit一条条发送给下游，完成以后将lastBatchFinished置为true
 
             // 设置waiting为true唤醒waitingForResult线程继续执行 等待OpenCL执行完kernel将结果传回来 并组装成tuple发送到下游
-            waitingForResultsThread.setBatchStartTime(batchStartTime);
+            // waitingForResultsThread.setBatchStartTime(batchStartTime);
             /*
             在发送之前先检查上一批是否结果已经返回，如果已经返回，利用jni将数据发送到native共享内存；返回后表示数据发送成功 立即将缓冲区清空 可以接收下一批数据
             如果没有返回 则等待上一批数据处理完；

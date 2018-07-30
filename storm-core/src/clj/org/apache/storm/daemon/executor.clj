@@ -1037,7 +1037,9 @@
   (.cleanup bolt))
 
 (defmethod close-component :accBolt [executor-data accBolt]
-  (.accCleanup accBolt))
+  (let [^IAccBolt acc-bolt accBolt]
+    (.accCleanup acc-bolt))
+  )
 
 ;; TODO: refactor this to be part of an executor-specific map
 (defmethod mk-executor-stats :spout [_ rate]
