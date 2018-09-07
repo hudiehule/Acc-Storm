@@ -39,19 +39,22 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     private AtomicBoolean waiting;
     private long batchCount = 0;
     class GettingResultsTask implements Runnable{
-        private long batchStartTime;
+        /*private long batchStartTime;
         public GettingResultsTask(long startTime){
             batchStartTime = startTime;
-        }
+        }*/
         @Override
         public void run() {
-            bufferManager.waitAndPollOutputTupleEleFromShm();
-            long batchNativeTime = System.nanoTime() - batchStartTime;
-            Values[] values = bufferManager.constructOutputData();
-            for(int i = 0;i<values.length;i++){
-                accCollector.emit(values[i]);
+            while(true){
+                System.out.println("waiting for result form openclHost");
+                bufferManager.waitAndPollOutputTupleEleFromShm();
+              //  long batchNativeTime = System.nanoTime() - batchStartTime;
+                Values[] values = bufferManager.constructOutputData();
+                for(int i = 0;i<values.length;i++){
+                    accCollector.emit(values[i]);
+                }
+                System.out.println("get result from openclHost");
             }
-            System.out.println("get result from openclHost, batch time : " + batchNativeTime);
         }
     }
     /*class WaitingForResults extends Thread{
@@ -128,6 +131,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
                 inputTupleEleTypes,bufferManager.getInputBufferShmids(),outputTupleEleTypes,bufferManager.getOutputBufferShmids(),bufferManager.getInputAndOutputFlagShmid());
         LOG.info("get the ack from the native");
         this.threadPool = Executors.newSingleThreadExecutor();
+        threadPool.execute(new GettingResultsTask());
         /*this.waitingForResultsThread = new WaitingForResults(collector);
         waitingForResultsThread.setName("waitingForResultsThread");
         waitingForResultsThread.setDaemon(true);
@@ -164,7 +168,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             // 将每一个缓冲区的数据发送到共享内存中，发送完成以后将缓冲区清空 将缓冲区的isFull置为false 发送完成以后将共享存储中的inputflag的值设为1 表示数据准备好 kernel可以运行了
             bufferManager.pushInputTuplesFromBufferToShmAndStartKernel(); //如果上一批数据还没被消费 将会等待在这里 阻塞函数
 
-            threadPool.execute(new GettingResultsTask(batchStartTime));
+
             /*LOG.info("the waitingForResultsThread is alive: "+ waitingForResultsThread.isAlive() + ", its state: "+ waitingForResultsThread.getState());
             LOG.info("the stackTrace:");
             StackTraceElement[] stackTraceElements = waitingForResultsThread.getStackTrace();
