@@ -432,8 +432,8 @@
             (.cleanup hook)))
         (.disconnect (:storm-cluster-state executor-data))
         (when @(:open-or-prepare-was-called? executor-data)
-          (doseq [obj (map :object (vals task-datas))]
-            (close-component executor-data obj)))
+          (doseq [task-data (vals task-datas)]
+            (close-component executor-data task-data)))
         (log-message "Shut down executor " component-id ":" (pr-str executor-id)))
         )))
 
@@ -1030,14 +1030,16 @@
        :factory? true
        :thread-name (str component-id "-acc-executor" (:executor-id executor-data)))]))
 
-(defmethod close-component :spout [executor-data spout]
-  (.close spout))
+(defmethod close-component :spout [executor-data task-data]
+  (let [spout (:object task-data)]
+    (.close spout)))
 
-(defmethod close-component :bolt [executor-data bolt]
-  (.cleanup bolt))
+(defmethod close-component :bolt [executor-data task-data]
+  (let [bolt (:object task-data)]
+    (.cleanup bolt)))
 
-(defmethod close-component :accBolt [executor-data accBolt]
-  (let [^IAccBolt acc-bolt accBolt]
+(defmethod close-component :accBolt [executor-data task-data]
+  (let [^IAccBolt acc-bolt (:object task-data)]
     (.accCleanup acc-bolt))
   )
 

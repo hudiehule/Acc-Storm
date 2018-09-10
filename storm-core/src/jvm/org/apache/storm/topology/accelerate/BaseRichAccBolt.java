@@ -35,7 +35,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
  //   private volatile boolean lastBatchFinished = true;
     private ComponentConnectionToNative connection;
  //   private ExecutorService threadPool;
-   private WaitingForResults waitingForResultsThread;
+    private WaitingForResults waitingForResultsThread;
     private AtomicBoolean waiting;
     private long batchCount = 0;
     /*class GettingResultsTask implements Runnable{
@@ -140,7 +140,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
 
     @Override
     public void cleanup() {
-
+        LOG.info("close acc bolt");
     }
 
     @Override
