@@ -36,6 +36,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     private ComponentConnectionToNative connection;
  //   private ExecutorService threadPool;
     private WaitingForResults waitingForResultsThread;
+    private TestThread testThread;
     private AtomicBoolean waiting;
     private long batchCount = 0;
     /*class GettingResultsTask implements Runnable{
@@ -57,6 +58,19 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             }
         }
     }*/
+    class TestThread extends Thread{
+        private volatile boolean cancel = false;
+        @Override
+        public void run() {
+            while(!cancel){
+                Utils.sleep(1000);
+                System.out.println("test Thread");
+            }
+        }
+        public void shutdown(){
+            cancel = true;
+        }
+    }
     class WaitingForResults extends Thread{
         OutputCollector collector;
         volatile boolean listenning;
@@ -134,6 +148,8 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         waitingForResultsThread.setDaemon(true);
       //  this.waiting = new AtomicBoolean(false);
         waitingForResultsThread.start();
+        this.testThread = new TestThread();
+        testThread.start();
         LOG.info("acc prepare accomplished");
     }
 
@@ -175,6 +191,14 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             LOG.info("waiting for result thread is alive: "+waitingForResultsThread.isAlive());
             LOG.info("waiting for result thread is interrupted: "+waitingForResultsThread.isInterrupted());
             LOG.info("thread stack element:");
+            for(StackTraceElement ele : waitingForResultsThread.getStackTrace()){
+                LOG.info(ele.toString());
+            }
+
+            LOG.info("test Thread state: "+waitingForResultsThread.getState());
+            LOG.info("test Thread is alive: "+waitingForResultsThread.isAlive());
+            LOG.info("test Thread is interrupted: "+waitingForResultsThread.isInterrupted());
+            LOG.info("test Thread stack element:");
             for(StackTraceElement ele : waitingForResultsThread.getStackTrace()){
                 LOG.info(ele.toString());
             }
