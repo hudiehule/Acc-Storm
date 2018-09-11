@@ -67,6 +67,10 @@ public class FStormTestTopology {
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
             declarer.declare(new Fields("sentence"));
         }
+
+        public void close(){
+            System.out.println("data source close()");
+        }
     }
 
 
@@ -85,6 +89,10 @@ public class FStormTestTopology {
                 if(ele != ' ') _collector.emit(tuple,new Values(ele));
             }
             _collector.ack(tuple);
+        }
+
+        public void cleanup(){
+            System.out.println("split bolt cleanup()");
         }
     }
     public static class MapBolt extends BaseRichAccBolt {
@@ -114,6 +122,9 @@ public class FStormTestTopology {
            declarer.declare(new Fields("char_int_value"));
         }
 
+        public void cleanup(){
+            System.out.println("map compute cleanup()");
+        }
     }
 
     public static class ViewBolt extends BaseRichBolt{
@@ -127,6 +138,9 @@ public class FStormTestTopology {
             int value = tuple.getInteger(0);
             System.out.println("result: " + value);
             _collector.ack(tuple);
+        }
+        public void cleanup(){
+            System.out.println("view bolt cleanup");
         }
     }
     public static void main(String[] args) throws Exception{
