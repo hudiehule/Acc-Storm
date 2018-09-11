@@ -426,11 +426,14 @@
         (doseq [t threads]
           (.interrupt t)
           (.join t))
+        (log-message "stage 1")
         (stats/cleanup-stats! (:stats executor-data))
+        (log-message "stage 2")
         (doseq [user-context (map :user-context (vals task-datas))]
           (doseq [hook (.getHooks user-context)]
             (.cleanup hook)))
         (.disconnect (:storm-cluster-state executor-data))
+        (log-message "stage 3")
         (when @(:open-or-prepare-was-called? executor-data)
           (doseq [task-data (vals task-datas)]
             (close-component executor-data task-data)))
