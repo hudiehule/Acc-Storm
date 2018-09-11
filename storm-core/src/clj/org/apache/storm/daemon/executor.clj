@@ -421,8 +421,10 @@
       (shutdown
         [this]
         (log-message "Shutting down executor " component-id ":" (pr-str executor-id))
+        (log-message "start shuting down")
         (disruptor/halt-with-interrupt! (:receive-queue executor-data))
         (disruptor/halt-with-interrupt! (:batch-transfer-queue executor-data))
+        (log-message "stage 0")
         (doseq [t threads]
           (.interrupt t)
           (.join t))

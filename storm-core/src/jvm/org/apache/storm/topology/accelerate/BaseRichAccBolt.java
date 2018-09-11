@@ -64,7 +64,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         public void run() {
             while(!cancel){
                 Utils.sleep(1000);
-                System.out.println("test Thread");
+                LOG.info("test Thread");
             }
         }
         public void shutdown(){
@@ -199,7 +199,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             LOG.info("test Thread is alive: "+waitingForResultsThread.isAlive());
             LOG.info("test Thread is interrupted: "+waitingForResultsThread.isInterrupted());
             LOG.info("test Thread stack element:");
-            for(StackTraceElement ele : waitingForResultsThread.getStackTrace()){
+            for(StackTraceElement ele : testThread.getStackTrace()){
                 LOG.info(ele.toString());
             }
             // 此时有线程等待OpenCL Host将结果回传给这个executor 传回以后这个线程使用collector.emit一条条发送给下游，完成以后将lastBatchFinished置为true
