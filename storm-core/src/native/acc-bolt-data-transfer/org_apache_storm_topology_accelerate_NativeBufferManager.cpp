@@ -452,13 +452,14 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
   (JNIEnv * env, jobject obj, jint shmid){
         void * shared_memory = shmat(shmid,(void *)0,0);
         struct shared_data_flag * shared_data_flag = (struct shared_data_flag *)shared_memory;
+        int output_flag = 0;
         while(true){
-             int output_flag = shared_data_flag->output_flag;
+             output_flag = shared_data_flag->output_flag;
              if(output_flag == OUTPUT_DATA_READY){
                    break;
              }
         }
-        printf("output_data ready\n");
+        printf("wait end, output_data ready\n");
         if(shmdt(shared_memory) == -1){
              fprintf(stderr,"shmdt failed\n");
              exit(EXIT_FAILURE);
@@ -506,13 +507,14 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
   (JNIEnv * env, jobject obj, jint shmid){
         void * shared_memory = shmat(shmid,(void *)0,0);
         struct shared_data_flag * shared_data_flag = (struct shared_data_flag *)shared_memory;
+        int input_flag = 0;
         while(true){
-             int input_flag = shared_data_flag->input_flag;
+             input_flag = shared_data_flag->input_flag;
              if(input_flag == INPUT_DATA_CONSUMED){
                   break;
              }
         }
-        printf("input_data ready\n");
+        printf(" wait end ,input_data consumed\n");
         if(shmdt(shared_memory) == -1){
              fprintf(stderr,"shmdt failed\n");
              exit(EXIT_FAILURE);

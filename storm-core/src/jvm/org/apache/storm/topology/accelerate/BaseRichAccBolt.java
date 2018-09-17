@@ -63,7 +63,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         @Override
         public void run() {
             while(!cancel){
-                Utils.sleep(1000);
+                Utils.sleep(2000);
                 LOG.info("test Thread");
             }
         }
