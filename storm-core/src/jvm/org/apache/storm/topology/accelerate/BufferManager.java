@@ -50,8 +50,12 @@ public class BufferManager {
          inputBuffer.addTuple(tupleElements);
     }
 
-    public void waitAndPollOutputTupleEleFromShm(){
-         nativeBufferManager.waitAndPollOutputTupleEleFromShm(outputBuffer.size,outputBuffer);
+    public void waitAndPollOutputTupleEleFromShm() throws Exception{
+        try{
+            nativeBufferManager.waitAndPollOutputTupleEleFromShm(outputBuffer.size,outputBuffer);
+        }catch(Exception e){
+            throw e;
+        }
     }
 
     public void pushInputTuplesFromBufferToShmAndStartKernel(){

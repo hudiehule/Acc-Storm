@@ -80,15 +80,19 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             this.listenning = true;
         }
         public void run(){
-            while(listenning){
-                LOG.info("waiting for result form openclHost");
-                bufferManager.waitAndPollOutputTupleEleFromShm();
-                // long batchNativeTime = System.nanoTime() - batchStartTime;
-                Values[] values = bufferManager.constructOutputData();
-                for(int i = 0;i<values.length;i++){
-                    collector.emit(values[i]);
+            try{
+                while(listenning){
+                    LOG.info("waiting for result form openclHost");
+                    bufferManager.waitAndPollOutputTupleEleFromShm();
+                    // long batchNativeTime = System.nanoTime() - batchStartTime;
+                    Values[] values = bufferManager.constructOutputData();
+                    for(int i = 0;i<values.length;i++){
+                        collector.emit(values[i]);
+                    }
+                    LOG.info("get result from openclHost");
                 }
-                LOG.info("get result from openclHost");
+            }catch (Exception e){
+                LOG.info("exception occur :" + e.getMessage());
             }
         }
 
