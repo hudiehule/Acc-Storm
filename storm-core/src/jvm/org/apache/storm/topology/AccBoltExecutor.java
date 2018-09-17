@@ -2,7 +2,7 @@ package org.apache.storm.topology;
 
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
-import org.apache.storm.topology.accelerate.BaseRichAccBolt;
+import org.apache.storm.topology.accelerate.IRichAccBolt;
 import org.apache.storm.tuple.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,10 +15,10 @@ import java.util.Map;
 public class AccBoltExecutor implements IRichBolt {
     public static final Logger LOG = LoggerFactory.getLogger(BasicBoltExecutor.class);
 
-    private BaseRichAccBolt _bolt;
+    private IRichAccBolt _bolt;
     private transient BasicOutputCollector _collector;
 
-    public AccBoltExecutor(BaseRichAccBolt bolt) {
+    public AccBoltExecutor(IRichAccBolt bolt) {
         _bolt = bolt;
     }
 

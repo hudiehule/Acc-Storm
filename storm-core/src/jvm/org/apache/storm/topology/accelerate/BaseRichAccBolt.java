@@ -145,7 +145,6 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         threadPool.execute(new GettingResultsTask());*/
         this.waitingForResultsThread = new WaitingForResults(collector);
         waitingForResultsThread.setName("waitingForResultsThread");
-        waitingForResultsThread.setDaemon(true);
       //  this.waiting = new AtomicBoolean(false);
         waitingForResultsThread.start();
         this.testThread = new TestThread();

@@ -118,9 +118,11 @@ public class TopologyBuilder {
     public StormTopology createTopology() {
         Map<String, Bolt> boltSpecs = new HashMap<>();
         Map<String, SpoutSpec> spoutSpecs = new HashMap<>();
-        Map<String,Bolt> accBoltSpecs = new HashMap<>();
+        Map<String, Bolt> accBoltSpecs = new HashMap<>();
         for(String id : _accBolts.keySet()){
-            if(!_accGeneralBolts.containsKey(id)) _accBolts.remove(id);
+            if(!_accGeneralBolts.containsKey(id)){
+                throw new IllegalStateException("AccBolt '" + id + "' doesn't have an general bolt");
+            }
         }
         maybeAddCheckpointSpout();
         for(String boltId: _bolts.keySet()) {
