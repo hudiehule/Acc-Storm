@@ -92,7 +92,8 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
                     LOG.info("get result from openclHost");
                 }
             }catch (Exception e){
-                LOG.info("exception occur :" + e.getMessage());
+                LOG.info("exception occur :" + e.toString());
+                e.printStackTrace();
             }
         }
 
