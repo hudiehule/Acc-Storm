@@ -81,14 +81,14 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         }
         public void run(){
             while(listenning){
-                System.out.println("waiting for result form openclHost");
+                LOG.info("waiting for result form openclHost");
                 bufferManager.waitAndPollOutputTupleEleFromShm();
-               // long batchNativeTime = System.nanoTime() - batchStartTime;
+                // long batchNativeTime = System.nanoTime() - batchStartTime;
                 Values[] values = bufferManager.constructOutputData();
                 for(int i = 0;i<values.length;i++){
                     collector.emit(values[i]);
                 }
-                System.out.println("get result from openclHost");
+                LOG.info("get result from openclHost");
             }
         }
 
@@ -148,6 +148,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
       //  this.waiting = new AtomicBoolean(false);
         waitingForResultsThread.start();
         this.testThread = new TestThread();
+        testThread.setName("hudie-test-thread");
         testThread.start();
         LOG.info("acc prepare accomplished");
     }
@@ -194,9 +195,9 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
                 LOG.info(ele.toString());
             }
 
-            LOG.info("test Thread state: "+waitingForResultsThread.getState());
-            LOG.info("test Thread is alive: "+waitingForResultsThread.isAlive());
-            LOG.info("test Thread is interrupted: "+waitingForResultsThread.isInterrupted());
+            LOG.info("test Thread state: "+testThread.getState());
+            LOG.info("test Thread is alive: "+testThread.isAlive());
+            LOG.info("test Thread is interrupted: "+testThread.isInterrupted());
             LOG.info("test Thread stack element:");
             for(StackTraceElement ele : testThread.getStackTrace()){
                 LOG.info(ele.toString());
