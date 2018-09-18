@@ -1036,18 +1036,15 @@
        :thread-name (str component-id "-acc-executor" (:executor-id executor-data)))]))
 
 (defmethod close-component :spout [executor-data task-data]
-  (let [spout (:object task-data)
-        _ (log-message "spout close")]
+  (let [spout (:object task-data)]
     (.close spout)))
 
 (defmethod close-component :bolt [executor-data task-data]
-  (let [bolt (:object task-data)
-        _ (log-message "bolt cleanup")]
+  (let [bolt (:object task-data)]
     (.cleanup bolt)))
 
 (defmethod close-component :accBolt [executor-data task-data]
-  (let [^IAccBolt acc-bolt (:object task-data)
-        _ (log-message "accCleanup" )]
+  (let [^IAccBolt acc-bolt (:object task-data)]
     (.accCleanup acc-bolt))
   )
 

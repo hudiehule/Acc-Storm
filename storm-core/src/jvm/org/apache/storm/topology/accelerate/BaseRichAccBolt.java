@@ -36,41 +36,8 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     private ComponentConnectionToNative connection;
  //   private ExecutorService threadPool;
     private WaitingForResults waitingForResultsThread;
-    private TestThread testThread;
     private AtomicBoolean waiting;
     private long batchCount = 0;
-    /*class GettingResultsTask implements Runnable{
-        *//*private long batchStartTime;
-        public GettingResultsTask(long startTime){
-            batchStartTime = startTime;
-        }*//*
-        @Override
-        public void run() {
-            while(true){
-                System.out.println("waiting for result form openclHost");
-                bufferManager.waitAndPollOutputTupleEleFromShm();
-              //  long batchNativeTime = System.nanoTime() - batchStartTime;
-                Values[] values = bufferManager.constructOutputData();
-                for(int i = 0;i<values.length;i++){
-                    accCollector.emit(values[i]);
-                }
-                System.out.println("get result from openclHost");
-            }
-        }
-    }*/
-    class TestThread extends Thread{
-        private volatile boolean cancel = false;
-        @Override
-        public void run() {
-            while(!cancel){
-                Utils.sleep(2000);
-                LOG.info("test Thread");
-            }
-        }
-        public void shutdown(){
-            cancel = true;
-        }
-    }
     class WaitingForResults extends Thread{
         OutputCollector collector;
         volatile boolean listenning;
@@ -152,9 +119,6 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         waitingForResultsThread.setName("waitingForResultsThread");
       //  this.waiting = new AtomicBoolean(false);
         waitingForResultsThread.start();
-        this.testThread = new TestThread();
-        testThread.setName("hudie-test-thread");
-        testThread.start();
         LOG.info("acc prepare accomplished");
     }
 
@@ -169,16 +133,9 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         //发送消息给nativeMachine  将这个bolt对应的FPGA 的opencl资源都清除
       //  connection.cleanupOpenCLProgram(exeKernelFile,kernelFunctionName);
         LOG.info("close the BaseRichAccBolt");
-        cleanpOpenCLProgram(); // 通过设置共享内存中input flag的值为-1 表示这个kernel可以停止运行了 native将会清理资源 包括清理共享内存的资源
-      //  threadPool.shutdown();
-        LOG.info("waiting for result thread state: "+waitingForResultsThread.getState());
-        LOG.info("waiting for result thread is alive: "+waitingForResultsThread.isAlive());
-        LOG.info("waiting for result thread is interrupted: "+waitingForResultsThread.isInterrupted());
-        LOG.info("thread stack element:");
-        for(StackTraceElement ele : waitingForResultsThread.getStackTrace()){
-            LOG.info(ele.toString());
-        }
         waitingForResultsThread.shutdown(); //关闭线程
+        cleanpOpenCLProgram(); // 通过设置共享内存中input flag的值为-1 表示这个kernel可以停止运行了 native将会清理资源 包括清理共享内存的资源
+
         connection.close(); // 关闭socket连接
     }
 
@@ -192,21 +149,6 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             // 将每一个缓冲区的数据发送到共享内存中，发送完成以后将缓冲区清空 将缓冲区的isFull置为false 发送完成以后将共享存储中的inputflag的值设为1 表示数据准备好 kernel可以运行了
             bufferManager.pushInputTuplesFromBufferToShmAndStartKernel(); //如果上一批数据还没被消费 将会等待在这里 阻塞函数
 
-            LOG.info("waiting for result thread state: "+waitingForResultsThread.getState());
-            LOG.info("waiting for result thread is alive: "+waitingForResultsThread.isAlive());
-            LOG.info("waiting for result thread is interrupted: "+waitingForResultsThread.isInterrupted());
-            LOG.info("thread stack element:");
-            for(StackTraceElement ele : waitingForResultsThread.getStackTrace()){
-                LOG.info(ele.toString());
-            }
-
-            LOG.info("test Thread state: "+testThread.getState());
-            LOG.info("test Thread is alive: "+testThread.isAlive());
-            LOG.info("test Thread is interrupted: "+testThread.isInterrupted());
-            LOG.info("test Thread stack element:");
-            for(StackTraceElement ele : testThread.getStackTrace()){
-                LOG.info(ele.toString());
-            }
             // 此时有线程等待OpenCL Host将结果回传给这个executor 传回以后这个线程使用collector.emit一条条发送给下游，完成以后将lastBatchFinished置为true
 
             // 设置waiting为true唤醒waitingForResult线程继续执行 等待OpenCL执行完kernel将结果传回来 并组装成tuple发送到下游
