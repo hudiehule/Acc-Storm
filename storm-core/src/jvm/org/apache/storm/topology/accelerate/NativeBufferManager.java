@@ -152,6 +152,7 @@ public class NativeBufferManager {
         //首先等待outputFlag 的值为1 表示结果可取
         try{
             waitOutputDataReady(shmFlagid);
+            buffers.resetBuffers();
             LOG.info("start poll data form native machine");
             for(int i = 0; i <buffers.types.length;i++){
                 switch(buffers.types[i]){
