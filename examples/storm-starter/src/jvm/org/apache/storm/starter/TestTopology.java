@@ -1,6 +1,6 @@
 package org.apache.storm.starter;
 
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+
 import org.apache.storm.Config;
 import org.apache.storm.StormSubmitter;
 import org.apache.storm.generated.KillOptions;
@@ -10,7 +10,6 @@ import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.TopologyBuilder;
-import org.apache.storm.topology.base.BaseBasicBolt;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.topology.base.BaseRichSpout;
 import org.apache.storm.tuple.Fields;
@@ -132,7 +131,7 @@ public class TestTopology {
         }
         public void execute(Tuple tuple){
             int value = tuple.getInteger(0);
-            System.out.println("result: " + value);
+            int new_value = value * 2;
             _collector.ack(tuple);
         }
         public void cleanup(){
@@ -165,8 +164,6 @@ public class TestTopology {
             conf.setNumAckers(numAckers);
             conf.setDebug(isDebug);
 
-            String aoclFileName = "compute";
-            builder.setTopologyKernelFile(aoclFileName);//设置kernel本地可执行文件的路径 这个kernel必须是事先编译好的 提供kernel名称就可以了 去找
             String name = "TestTopology"; //拓扑名称
 
             StormSubmitter.submitTopology(name,conf,builder.createTopology());
