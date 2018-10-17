@@ -88,27 +88,6 @@ JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
   }
 /*
  * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
- * Method:    shmClear
- * Signature: ([I)V
- *//*
-JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_shmClear
-  (JNIEnv * env, jobject obj, jintArray shmid_array){
-         jint len = env->GetArrayLength(shmid_array);
-         jint* shmids = env->GetIntArrayElements(shmid_array,NULL);
-         if(shmids == NULL){
-             fprintf(stderr,"get shmid array failed\n");
-             exit(EXIT_FAILURE);
-         }
-         for(int i = 0;i<len;i++){
-            if(shmctl(shmids[i],IPC_RMID,0) == -1){
-                   fprintf(stderr,"shmctl(IPC_RMID) failed\n");
-                   exit(EXIT_FAILURE);
-            }
-         }
-         env->ReleaseIntArrayElements(shmid_array,shmids,0);
-  }*/
-/*
- * Class:     org_apache_storm_topology_accelerate_NativeBufferManager
  * Method:    putIntToNativeShm
  * Signature: (I[II)Z
  */
@@ -459,7 +438,6 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
                    break;
              }
         }
-        printf("wait end, output_data ready\n");
         if(shmdt(shared_memory) == -1){
              fprintf(stderr,"shmdt failed\n");
              exit(EXIT_FAILURE);
@@ -514,7 +492,6 @@ JNIEXPORT void JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
                   break;
              }
         }
-        printf(" wait end ,input_data consumed\n");
         if(shmdt(shared_memory) == -1){
              fprintf(stderr,"shmdt failed\n");
              exit(EXIT_FAILURE);

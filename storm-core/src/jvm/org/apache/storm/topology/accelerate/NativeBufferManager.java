@@ -44,18 +44,6 @@ public class NativeBufferManager {
         shmFlagid = shmGet(1,INPUT_AND_OUTPUT_FLAG_TYPE);
     }
 
-  /*  public void clearShareMemory(){
-        int[] shmids = new int[inputShmid.length+outputShmid.length+1];
-        int index = 0;
-        for(int i : inputShmid){
-            shmids[index++] = i;
-        }
-        for(int i : outputShmid){
-            shmids[index++] = i;
-        }
-        shmids[index] = shmFlagid;
-        shmClear(shmids);
-    }*/
 
     public void setKernelInputFlagEnd(){
         setInputDataEnd(shmFlagid);

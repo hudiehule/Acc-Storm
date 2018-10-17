@@ -3,6 +3,8 @@ package org.apache.storm.starter;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.storm.Config;
 import org.apache.storm.StormSubmitter;
+import org.apache.storm.generated.KillOptions;
+import org.apache.storm.generated.Nimbus;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -14,6 +16,7 @@ import org.apache.storm.topology.base.BaseRichSpout;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
+import org.apache.storm.utils.NimbusClient;
 import org.apache.storm.utils.Utils;
 
 import java.util.Map;
@@ -29,11 +32,11 @@ public class TestTopology {
         SpoutOutputCollector _collector;
         Random _rand;
         private static final String[] CHOICES = {
-                "marry had a little lamb whos fleese was white as snow",
-                "and every where that marry went the lamb was sure to go",
-                "one two three four five six seven eight nine ten",
-                "this is a test of the emergency broadcast system this is only a test",
-                "peter piper picked a peck of pickeled peppers"
+                "marry had a little lamb whos fleese was white as snow marry had a little lamb whos fleese was white as snow",
+                "and every where that marry went the lamb was sure to go marry had a little lamb whos fleese was white as snow",
+                "one two three four five six seven eight nine ten one two three four five six seven eight nine ten",
+                "this is a test of the emergency broadcast system this is only a test this is a test of the emergency broadcast system this is only a test",
+                "peter piper picked a peck of pickeled peppers peter piper picked a peck of pickeled peppers peter piper picked a peck of pickeled peppers"
         };
         public DataSpout(int time){
             this.sleepTime = time;
@@ -63,29 +66,17 @@ public class TestTopology {
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
             declarer.declare(new Fields("sentence"));
         }
+
+        public void close(){
+            System.out.println("data source close()");
+        }
     }
 
-    public static class SplitBolt extends BaseRichBolt {
 
+    public static class SplitBolt extends BaseRichBolt{
         OutputCollector _collector;
-        private TestThread testThread;
-        class TestThread extends Thread{
-            private volatile boolean cancel = false;
-            @Override
-            public void run() {
-                while(!cancel){
-                    Utils.sleep(1000);
-                    System.out.println("test Thread");
-                }
-            }
-            public void shutdown(){
-                cancel = true;
-            }
-        }
         public void prepare(Map conf,TopologyContext context,OutputCollector collector){
             _collector = collector;
-            testThread = new TestThread();
-            testThread.start();
         }
         public void declareOutputFields(OutputFieldsDeclarer declarer){
             declarer.declare(new Fields("char element"));
@@ -96,31 +87,100 @@ public class TestTopology {
             for (char ele : ch) {
                 if(ele != ' ') _collector.emit(tuple,new Values(ele));
             }
-            System.out.println(testThread.getState());
             _collector.ack(tuple);
         }
 
         public void cleanup(){
-            System.out.println("waiting for result thread state: "+testThread.getState());
-            System.out.println("waiting for result thread is alive: "+testThread.isAlive());
-            System.out.println("waiting for result thread is interrupted: "+testThread.isInterrupted());
-            System.out.println("thread stack element:");
-            for(StackTraceElement ele : testThread.getStackTrace()){
-                System.out.println(ele.toString());
+            System.out.println("split bolt cleanup()");
+        }
+    }
+    public static class MapBolt extends BaseRichBolt {
+        private OutputCollector collector;
+        public void prepare(Map stormConf, TopologyContext context,OutputCollector collector){
+            this.collector = collector;
+            System.out.println("Acc bolt preparation");
+        }
+        @Override
+        public void execute(Tuple tuple){
+            //用户执行逻辑 当这个组件不能在FPGA或者GPU上运行时 则还是放在CPU上运行  相应的在kernelFile中也有一种实现
+            char a = (char)tuple.getValue(0);
+            int value;
+            if(a > 'a' && a< 'z'){
+                value = a - 'a';
+            }else{
+                value = a - 'A';
             }
-            testThread.shutdown();
-            System.out.println("bolt cleanup");
+            collector.emit(tuple,new Values(value * value));
+            collector.ack(tuple);
+        }
+        @Override
+        public void declareOutputFields(OutputFieldsDeclarer declarer) {
+            declarer.declare(new Fields("char_int_value"));
+        }
+
+        public void cleanup(){
+            System.out.println("map compute cleanup()");
         }
     }
 
+    public static class ViewBolt extends BaseRichBolt{
+        OutputCollector _collector;
+        public void prepare(Map conf,TopologyContext context,OutputCollector collector){
+            _collector = collector;
+        }
+        public void declareOutputFields(OutputFieldsDeclarer declarer){
+        }
+        public void execute(Tuple tuple){
+            int value = tuple.getInteger(0);
+            System.out.println("result: " + value);
+            _collector.ack(tuple);
+        }
+        public void cleanup(){
+            System.out.println("view bolt cleanup");
+        }
+    }
     public static void main(String[] args) throws Exception{
-        TopologyBuilder builder = new TopologyBuilder();
-        builder.setSpout("source",new DataSpout(1000),1);
-        builder.setBolt("bolt",new SplitBolt(),1).shuffleGrouping("source");
+        if(args == null ||args.length <8){
+            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers sleepTime batchSize");
+        }else{
+            int spoutNum = Integer.valueOf(args[0]);
+            int bolt1Num = Integer.valueOf(args[1]);
+            int bolt2Num = Integer.valueOf(args[2]);
 
-        Config conf = new Config();
-        conf.setNumWorkers(1);
-        conf.setNumAckers(1);
-        StormSubmitter.submitTopology("test",conf,builder.createTopology());
+            int numAckers = Integer.valueOf(args[3]);
+            int numWorkers = Integer.valueOf(args[4]);
+
+            int sleepTime = Integer.valueOf(args[5]);
+            int mapBoltNum = Integer.valueOf(args[6]);
+            boolean isDebug = Boolean.valueOf(args[7]);
+            TopologyBuilder builder = new TopologyBuilder();
+
+            builder.setSpout("spout",new DataSpout(sleepTime),spoutNum);
+            builder.setBolt("split",new SplitBolt(),bolt1Num).shuffleGrouping("spout");
+            builder.setBolt("compute",new MapBolt(),mapBoltNum).shuffleGrouping("split");
+            builder.setBolt("view",new ViewBolt(),bolt2Num).shuffleGrouping("compute");
+
+            Config conf = new Config();
+            conf.setNumWorkers(numWorkers);
+            conf.setNumAckers(numAckers);
+            conf.setDebug(isDebug);
+
+            String aoclFileName = "compute";
+            builder.setTopologyKernelFile(aoclFileName);//设置kernel本地可执行文件的路径 这个kernel必须是事先编译好的 提供kernel名称就可以了 去找
+            String name = "TestTopology"; //拓扑名称
+
+            StormSubmitter.submitTopology(name,conf,builder.createTopology());
+
+            Map clusterConf = Utils.readStormConfig();
+            clusterConf.putAll(Utils.readCommandLineOpts());
+            Nimbus.Client client = NimbusClient.getConfiguredClient(clusterConf).getClient();
+
+            Thread.sleep(600*500); //运行十分钟
+            //kill the topology
+            KillOptions opts = new KillOptions();
+            opts.set_wait_secs(0);
+            client.killTopologyWithOpts(name, opts);
+        }
+
     }
 }

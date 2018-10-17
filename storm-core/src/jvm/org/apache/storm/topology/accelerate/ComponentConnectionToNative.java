@@ -38,8 +38,8 @@ public class ComponentConnectionToNative {
      * @param kernelFunctionName the kernel function name of this component
      */
     public void sendInitialOpenCLProgramRequest(String exeKernelFile,String kernelFunctionName,
-                                      int batchSize,String[] inputDataTypes,int[] inShmids,String[] outputDataTypes,int[] outShmids,int shmFlagid){
-        String message = Messages.constructStartOpenCLRuntimeMsg(exeKernelFile,kernelFunctionName,batchSize,inputDataTypes,inShmids,outputDataTypes,outShmids,shmFlagid);
+                                      int batchSize,int tupleParallelism,String[] inputDataTypes,int[] inShmids,String[] outputDataTypes,int[] outShmids,int shmFlagid){
+        String message = Messages.constructStartOpenCLRuntimeMsg(exeKernelFile,kernelFunctionName,batchSize,tupleParallelism,inputDataTypes,inShmids,outputDataTypes,outShmids,shmFlagid);
         try{
             byte[] b = message.getBytes();
             out.write(b);
@@ -48,22 +48,6 @@ public class ComponentConnectionToNative {
             LOG.error(e.getMessage());
             e.printStackTrace();
         }
-       /* try {
-            // readLine是一个阻塞函数，当没有数据读取时，就一直会阻塞在那里，而不是返回null,并且只有遇到'/r','/n'或者“/r/n”才会返回
-            LOG.info("waiting for start opencl runtime ack");
-            String recvMsg = reader.readLine();
-            if ( recvMsg == null ) {
-                throw new IOException("connection lost");
-            }else if( !recvMsg.equals(Messages.START_OPENCL_RUNTIME_ACK)){
-                LOG.info("get the message: " + recvMsg);
-                throw new IOException("recviced unknown messages");
-            }
-            LOG.info("get the message: " + recvMsg);
-        }catch(Exception e) {
-            LOG.error(e.getMessage());
-            e.printStackTrace();
-        }*/
-
     }
 
 

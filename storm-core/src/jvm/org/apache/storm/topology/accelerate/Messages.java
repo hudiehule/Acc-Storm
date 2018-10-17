@@ -15,13 +15,14 @@ public class Messages {
      */
     public static final String START_OPENCL_RUNTIME_ACK = "START_OPENCL_RUNTIME_ACK";
 
-    public static String constructStartOpenCLRuntimeMsg(String aoclKernelFileName,String kernelFunctionName,int batchSize,
+    public static String constructStartOpenCLRuntimeMsg(String aoclKernelFileName,String kernelFunctionName,int batchSize,int tupleParallelism,
                                                         String[] inputDataTypes,int[] inShmids,String[] outputDataTypes,int[] outShmids,int shmFlagid){
         StringBuilder builder = new StringBuilder(INITIAL_OPENCL_PROGRAM);
         builder.append("<aoclKernelFile>" + aoclKernelFileName + "<aoclKernelFile>");
         builder.append("<kernelFunctionName>" + kernelFunctionName + "<kernelFunctionName>");
         builder.append("<batchSize>"  + batchSize + "<batchSize>");
-        builder.append("<shmFlagid>" + shmFlagid + "<shmFlagid>");
+        builder.append("<tupleParallelism>" + tupleParallelism + "<tupleParallelism>");
+        builder.append("<shmFlagId>" + shmFlagid + "<shmFlagId>");
         builder.append("<inputDataInfo>");
         for(int i = 0 ; i< inputDataTypes.length; i++){
             builder.append("<"+ inputDataTypes[i] + "," + inShmids[i] + ">");

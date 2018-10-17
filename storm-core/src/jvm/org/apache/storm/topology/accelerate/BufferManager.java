@@ -16,7 +16,6 @@ public class BufferManager {
         this.outputBuffer = outputBuffer;
         this.nativeBufferManager = new NativeBufferManager();
         //  建立native共享内存 对input和output都要建立 并且建立一个共享存储区 存放flag变量
-        //  NativeBufferManager.shmGet(inputBuffer.size);
         initialShm();
     }
 
@@ -25,13 +24,11 @@ public class BufferManager {
      */
     private void initialShm(){
        // generateShmKeys(inputBufferShmKeys,outputBufferShmKeys);
-        nativeBufferManager.crateSharedMemory(inputBuffer.size,inputBuffer.types,outputBuffer.types);
+        nativeBufferManager.crateSharedMemory(inputBuffer.bufferSize,inputBuffer.types,outputBuffer.types);
         nativeBufferManager.createInputAndOutputFlagShm();
     }
 
-  /*  public void clearShm(){
-        nativeBufferManager.clearShareMemory();
-    }*/
+
     public boolean isInputBufferFull(){
         return inputBuffer.isFull();
     }
@@ -52,14 +49,14 @@ public class BufferManager {
 
     public void waitAndPollOutputTupleEleFromShm() throws Exception{
         try{
-            nativeBufferManager.waitAndPollOutputTupleEleFromShm(outputBuffer.size,outputBuffer);
+            nativeBufferManager.waitAndPollOutputTupleEleFromShm(outputBuffer.bufferSize,outputBuffer);
         }catch(Exception e){
             throw e;
         }
     }
 
     public void pushInputTuplesFromBufferToShmAndStartKernel(){
-         nativeBufferManager.pushInputTuplesFromBufferToShmAndStartKernel(inputBuffer.size,inputBuffer);
+         nativeBufferManager.pushInputTuplesFromBufferToShmAndStartKernel(inputBuffer.bufferSize,inputBuffer);
          inputBuffer.resetBuffers();
     }
 

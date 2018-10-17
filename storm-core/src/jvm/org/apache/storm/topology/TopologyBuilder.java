@@ -222,8 +222,8 @@ public class TopologyBuilder {
 
     /**
      * Define a new bolt which can be accelerated in FPGA or GPU in this topology with the specified amount of parallelism
-     * @param id
-     * @param bolt
+     * @param id the id of this component
+     * @param bolt the bolt
      * @param parallelism_hint the number of tasks that should be assigned to execute this bolt while this component can not be accelerated
      * @return use the returned object to declare the inputs to this component
      * @throws IllegalArgumentException

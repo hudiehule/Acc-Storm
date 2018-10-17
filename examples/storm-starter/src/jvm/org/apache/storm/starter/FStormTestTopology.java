@@ -33,11 +33,11 @@ public class FStormTestTopology {
         SpoutOutputCollector _collector;
         Random _rand;
         private static final String[] CHOICES = {
-                "marry had a little lamb whos fleese was white as snow",
-                "and every where that marry went the lamb was sure to go",
-                "one two three four five six seven eight nine ten",
-                "this is a test of the emergency broadcast system this is only a test",
-                "peter piper picked a peck of pickeled peppers"
+                "marry had a little lamb whos fleese was white as snow marry had a little lamb whos fleese was white as snow",
+                "and every where that marry went the lamb was sure to go marry had a little lamb whos fleese was white as snow",
+                "one two three four five six seven eight nine ten one two three four five six seven eight nine ten",
+                "this is a test of the emergency broadcast system this is only a test this is a test of the emergency broadcast system this is only a test",
+                "peter piper picked a peck of pickeled peppers peter piper picked a peck of pickeled peppers peter piper picked a peck of pickeled peppers"
         };
         public DataSpout(int time){
             this.sleepTime = time;
@@ -97,8 +97,8 @@ public class FStormTestTopology {
     }
     public static class MapBolt extends BaseRichAccBolt {
         private OutputCollector collector;
-        public MapBolt(Class[] inputTupleEleTypes,Class[] outputTupleEleTypes,int batchSize,String kernelName){
-            super(inputTupleEleTypes,outputTupleEleTypes,batchSize,kernelName);
+        public MapBolt(Class[] inputTupleEleTypes,Class[] outputTupleEleTypes,int batchSize,int tupleParallelism, String kernelName){
+            super(inputTupleEleTypes,outputTupleEleTypes,batchSize,tupleParallelism,kernelName);
         }
         public void prepare(Map stormConf, TopologyContext context,OutputCollector collector){
               this.collector = collector;
@@ -161,7 +161,7 @@ public class FStormTestTopology {
 
             builder.setSpout("spout",new DataSpout(sleepTime),spoutNum);
             builder.setBolt("split",new SplitBolt(),bolt1Num).shuffleGrouping("spout");
-            builder.setAccBolt("compute",new MapBolt(new Class[]{char.class}, new Class[]{int.class},batchSize,"compute")).shuffleGrouping("split");
+            builder.setAccBolt("compute",new MapBolt(new Class[]{char.class}, new Class[]{int.class},batchSize,1,"compute")).shuffleGrouping("split");
             builder.setBolt("view",new ViewBolt(),bolt2Num).shuffleGrouping("compute");
 
             Config conf = new Config();
