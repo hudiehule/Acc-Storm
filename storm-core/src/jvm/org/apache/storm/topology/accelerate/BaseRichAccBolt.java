@@ -37,13 +37,20 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
    // private WaitingForResults waitingForResultsThread;
    // private AtomicBoolean waiting;
     private long batchCount = 0;
+    private long inputCount = 0;
+    private List<Tuple> pendings;
     class GettingResultsTask implements Runnable{
         OutputCollector collector;
         long batchStartTime;
         boolean listenning = true;
-        public GettingResultsTask(OutputCollector collector,long batchStartTime){
+        List<Tuple> pendings;
+        public GettingResultsTask(OutputCollector collector,List<Tuple> tuples){
             this.collector = collector;
-            this.batchStartTime = batchStartTime;
+            this.pendings = new ArrayList<>(tuples);
+        }
+
+        public void setBatchStartTime(long time){
+            this.batchStartTime = time;
         }
         public void run(){
             try{
@@ -53,7 +60,8 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
                     // long batchNativeTime = System.nanoTime() - batchStartTime;
                     Values[] values = bufferManager.constructOutputData();
                     for(int i = 0;i<values.length;i++){
-                        collector.emit(values[i]);
+                        collector.emit(pendings.get(i), values[i]);
+                        collector.ack(pendings.get(i));
                     }
                     long batchEndTime = System.nanoTime();
                     LOG.info("batch processing time :" + (batchEndTime - this.batchStartTime));
@@ -64,38 +72,6 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             }
         }
     }
- /*   class WaitingForResults extends Thread{
-        OutputCollector collector;
-        volatile boolean listenning;
-        //long batchStartTime;
-        public WaitingForResults(OutputCollector collector){
-            this.collector = collector;
-            this.listenning = true;
-        }
-        public void run(){
-            try{
-                while(listenning){
-                    LOG.info("waiting for result form openclHost");
-                    bufferManager.waitAndPollOutputTupleEleFromShm();
-                    // long batchNativeTime = System.nanoTime() - batchStartTime;
-                    Values[] values = bufferManager.constructOutputData();
-                    for(int i = 0;i<values.length;i++){
-                        collector.emit(values[i]);
-                    }
-                    LOG.info("get result from openclHost");
-                }
-            }catch (Exception e){
-                LOG.info("exception occur :" + e.toString());
-                e.printStackTrace();
-            }
-        }
-
-        public void shutdown(){
-            LOG.info("the state of the thread: " + this.getState());
-            LOG.info("listening = " + this.listenning);
-            this.listenning = false;
-        }
-    }*/
 
     public String[] getTypeName(Class[] dataTypes){
         String[] names = new String[dataTypes.length];
@@ -140,6 +116,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         connection.sendInitialOpenCLProgramRequest(exeKernelFile,kernelFunctionName,batchSize,tupleParallelism,
                 inputTupleEleTypes,bufferManager.getInputBufferShmids(),outputTupleEleTypes,bufferManager.getOutputBufferShmids(),bufferManager.getInputAndOutputFlagShmid());
         LOG.info("get the ack from the native");
+        this.pendings = new ArrayList<>(batchSize);
         this.threadPool = Executors.newSingleThreadExecutor();
         /*this.waitingForResultsThread = new WaitingForResults(collector);
         waitingForResultsThread.setName("waitingForResultsThread");
@@ -168,32 +145,28 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
 
     @Override
     public void accExecute(Tuple input){
-        if(bufferManager.isInputBufferFull()){
-            /*while(!lastBatchFinished){ //当上一批的结果还未返回时 持续进行检查 此处阻塞
-            }*/
+        if(inputCount == batchSize){
+            GettingResultsTask getResultTask = new GettingResultsTask(accCollector,pendings);
+            getResultTask.setBatchStartTime(System.nanoTime());
+            bufferManager.pushInputTuplesFromBufferToShmAndStartKernel();
+            threadPool.submit(getResultTask);
+            inputCount = 0;
+            pendings.clear();
+        }
+        pendings.add(input);
+        bufferManager.putInputTupleToBuffer(input);
+        inputCount++;
+       /* if(bufferManager.isInputBufferFull()){
+            *//*while(!lastBatchFinished){ //当上一批的结果还未返回时 持续进行检查 此处阻塞
+            }*//*
             long batchStartTime = System.nanoTime(); // 一个batch开始计算
             LOG.info("start batch " + batchCount++);
             // 将每一个缓冲区的数据发送到共享内存中，发送完成以后将缓冲区清空 将缓冲区的isFull置为false 发送完成以后将共享存储中的inputflag的值设为1 表示数据准备好 kernel可以运行了
             bufferManager.pushInputTuplesFromBufferToShmAndStartKernel(); //如果上一批数据还没被消费 将会等待在这里 阻塞函数
             threadPool.submit(new GettingResultsTask(accCollector,batchStartTime));
-            // 此时有线程等待OpenCL Host将结果回传给这个executor 传回以后这个线程使用collector.emit一条条发送给下游，完成以后将lastBatchFinished置为true
-
-            // 设置waiting为true唤醒waitingForResult线程继续执行 等待OpenCL执行完kernel将结果传回来 并组装成tuple发送到下游
-            // waitingForResultsThread.setBatchStartTime(batchStartTime);
-            /*
-            在发送之前先检查上一批是否结果已经返回，如果已经返回，利用jni将数据发送到native共享内存；返回后表示数据发送成功 立即将缓冲区清空 可以接收下一批数据
-            如果没有返回 则等待上一批数据处理完；
-            */
-            /*
-            给每一个accbolt创建一个connection到openclHost 利用它来发送和接收控制信息 发送和接收数据
-            利用信号通知相应的线程去处理下面的操作
-            将这个batch通过jni放到native内存中；然后清空buffers 发送消息给opencl host去取数据并启动kernel进行计算 这个过程中应该还可以继续将数据放入缓冲区
-            一旦这个batch的结果返回，则可以直接将这个刚缓冲的数据发送到native然后继续进行处理 类似CPU的流水线技术 所以这里是否要建立双缓冲
-            等待计算结果？阻塞？不应该阻塞？
-             */
         }
         bufferManager.putInputTupleToBuffer(input); //缓冲未满则直接将数据放入缓冲区
-        accCollector.ack(input);
+        accCollector.ack(input);*/
     }
 
 }

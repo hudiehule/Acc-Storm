@@ -348,7 +348,7 @@ public class FStormTestTopology {
             int numAckers = Integer.valueOf(args[3]);
             int numWorkers = Integer.valueOf(args[4]);
 
-            int sleepTime = Integer.valueOf(args[5]);
+            int ratePerSecond = Integer.valueOf(args[5]);
             int batchSize = Integer.valueOf(args[6]);
             boolean isDebug = Boolean.valueOf(args[7]);
 
@@ -419,7 +419,7 @@ public class FStormTestTopology {
             TopologyBuilder builder = new TopologyBuilder();
 
 
-            builder.setSpout("spout",new DataSpout(sleepTime),spoutNum);
+            builder.setSpout("spout",new DataSpout(ratePerSecond),spoutNum);
             builder.setBolt("split",new SplitBolt(),bolt1Num).shuffleGrouping("spout");
             builder.setAccBolt("compute",new MapBolt(new Class[]{char.class}, new Class[]{int.class},batchSize,1,"compute")).shuffleGrouping("split");
             builder.setBolt("view",new ViewBolt(),bolt2Num).shuffleGrouping("compute");
