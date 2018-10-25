@@ -62,7 +62,9 @@ public class NativeBufferManager {
     }
     public void pushInputTuplesFromBufferToShmAndStartKernel(int size, TupleBuffers buffers){
         //等待input data flag的值为0 表示可以向共享内存传送数据了
+        long wstime = System.nanoTime();
         waitInputDataConsumed(shmFlagid);
+        long wetime = System.nanoTime();
         for(int i = 0; i < buffers.types.length;i++){
             switch(buffers.types[i]){
                 case "int": {
@@ -133,13 +135,17 @@ public class NativeBufferManager {
         }
         //设置input flag 为1 表示共享内存的数据已经准备好 内核可以进行计算了
         setInputDataReady(shmFlagid);
-        LOG.info("accomplish transfering input data to native");
+        long dtime = System.nanoTime();
+
+        LOG.info("wait for input data Consumed time: " + (wetime-wstime) + ", dataTransferTime: " + (dtime - wetime));
     }
 
     public void waitAndPollOutputTupleEleFromShm(int size,TupleBuffers buffers) throws Exception{
         //首先等待outputFlag 的值为1 表示结果可取
         try{
+            long wstime = System.nanoTime();
             waitOutputDataReady(shmFlagid);
+            long wetime = System.nanoTime();
             buffers.resetBuffers();
             LOG.info("start poll data form native machine");
             for(int i = 0; i <buffers.types.length;i++){
@@ -210,9 +216,9 @@ public class NativeBufferManager {
                     }
                 }
             }
-            LOG.info("accomplished reading data from native machine");
             setOutputDataConsumed(shmFlagid);
-            LOG.info("accomplished set output data consumed");
+            long dtime = System.nanoTime();
+            LOG.info("wait for output data time: " + (wetime-wstime) + ", getting data time: "+ (dtime-wetime));
         }catch(Exception e){
             throw e;
         }
