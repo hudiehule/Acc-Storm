@@ -115,6 +115,9 @@ public class MatrixMultiplyOnStorm {
         DataOutputStream dos = null;
         public ResultWriter(String filePath){
             this.filePath = filePath;
+        }
+        public void prepare(Map conf,TopologyContext context,OutputCollector collector){
+            _collector = collector;
             try{
                 File file = new File(filePath);
                 if(!file.exists()){
@@ -125,9 +128,6 @@ public class MatrixMultiplyOnStorm {
             }catch (Exception e){
                 e.printStackTrace();
             }
-        }
-        public void prepare(Map conf,TopologyContext context,OutputCollector collector){
-            _collector = collector;
         }
         public void declareOutputFields(OutputFieldsDeclarer declarer){
         }
@@ -200,7 +200,7 @@ public class MatrixMultiplyOnStorm {
 
     public static void main(String[] args) throws Exception{
         if(args == null ||args.length <9){
-            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers sleepTime batchSize isDebug");
+            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond matrixSize resultFilePath isDebug");
         }else{
             int spoutNum = Integer.valueOf(args[0]);
             int bolt1Num = Integer.valueOf(args[1]);
