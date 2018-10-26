@@ -84,7 +84,7 @@ public class MatrixMultiplyOnStorm {
             _collector = collector;
         }
         public void declareOutputFields(OutputFieldsDeclarer declarer){
-            declarer.declare(new Fields("matrixC"));
+
         }
         public void execute(Tuple tuple){
             float[][] matrixA = (float[][])tuple.getValue(0);
