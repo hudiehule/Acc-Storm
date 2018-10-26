@@ -148,7 +148,12 @@ public class MatrixMultiplyOnStorm {
             _collector.ack(tuple);
         }
         public void cleanup(){
-
+            try{
+                dos.close();
+                fos.close();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
         }
     }
 
