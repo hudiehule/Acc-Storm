@@ -17,25 +17,26 @@ import org.apache.storm.utils.NimbusClient;
 import org.apache.storm.utils.Utils;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 /**
  * Created by Administrator on 2018/10/26.
  */
-public class MatrixMultiplyOnStorm {
-    public static class MatrixGenerator extends BaseRichSpout{
+public class VectorMultOnStorm {
+
+    public static class VectorGenerator extends BaseRichSpout{
         SpoutOutputCollector _collector;
-        float[] matrixA;
-        float[] matrixB;
+        ArrayList<Float> vectorA;
+        ArrayList<Float> vectorB;
         long _periodNano;
         long _emitAmount;
         Random _rand;
         long _nextEmitTime;
         long _emitsLeft;
-        int matrixN;
-        public MatrixGenerator(long ratePerSecond, int matrixN){
+        int vectorSize;
+        public VectorGenerator(long ratePerSecond, int vectorSize){
             if (ratePerSecond > 0) {
                 _periodNano = Math.max(1, 1000000000/ratePerSecond);
                 _emitAmount = Math.max(1, (long)((ratePerSecond / 1000000000.0) * _periodNano));
@@ -43,21 +44,20 @@ public class MatrixMultiplyOnStorm {
                 _periodNano = Long.MAX_VALUE - 1;
                 _emitAmount = 1;
             }
-            matrixA = new float[matrixN * matrixN];
-            matrixB = new float[matrixN * matrixN];
-            this.matrixN = matrixN;
+            vectorA = new ArrayList<>(vectorSize);
+            vectorB = new ArrayList<>(vectorSize);
+            this.vectorSize = vectorSize;
         }
         @Override
         public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
-             this._collector = collector;
-             this._rand = ThreadLocalRandom.current();
+            this._collector = collector;
+            this._rand = ThreadLocalRandom.current();
             _nextEmitTime = System.nanoTime();
             _emitsLeft = _emitAmount;
-             for(int i = 0; i < matrixN * matrixN;i++){
-                     matrixA[i] = _rand.nextFloat();
-                     matrixB[i] = _rand.nextFloat();
-
-             }
+            for(int i = 0; i < vectorSize;i++){
+                vectorA.add(_rand.nextFloat());
+                vectorB.add(_rand.nextFloat());
+            }
         }
         @Override
         public void nextTuple(){
@@ -67,39 +67,33 @@ public class MatrixMultiplyOnStorm {
             }
 
             if (_emitsLeft > 0) {
-                _collector.emit(new Values(matrixA,matrixB),_rand.nextInt());
+                _collector.emit(new Values(vectorA,vectorB),_rand.nextInt());
                 _emitsLeft--;
             }
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields("matrixA","matrixB"));
+            declarer.declare(new Fields("vectorA","vectorB"));
         }
     }
 
-    public static class MatrixMultiply extends BaseRichBolt {
+    public static class VectorMultiply extends BaseRichBolt {
         OutputCollector _collector;
         public void prepare(Map conf,TopologyContext context,OutputCollector collector){
             _collector = collector;
         }
         public void declareOutputFields(OutputFieldsDeclarer declarer){
-               declarer.declare(new Fields("matrixC"));
+             declarer.declare(new Fields("vectorC"));
         }
         public void execute(Tuple tuple){
-            float[] matrixA = (float[])tuple.getValue(0);
-            float[] matrixB = (float[])tuple.getValue(1);
-            int matrixN= (int)Math.sqrt(matrixA.length);
-            float[] matrixC = new float[matrixA.length];
-            for(int i = 0; i < matrixN; i++){
-                for(int j = 0; i < matrixN;i++){
-                    int sum = 0;
-                    for(int k = 0; k < matrixN;k++){
-                        sum += matrixA[i * matrixN + k] * matrixB[k * matrixN + j];
-                    }
-                    matrixC[i * matrixN + j] = sum;
-                }
+            ArrayList<Float> vectorA = ( ArrayList<Float>)tuple.getValue(0);
+            ArrayList<Float> vectorB = ( ArrayList<Float>)tuple.getValue(0);
+            int vectorSize = vectorA.size();
+            ArrayList<Float> vectorC = new ArrayList<>(vectorSize);
+            for(int i = 0; i < vectorSize; i++){
+                vectorC.add(vectorA.get(i) * vectorB.get(i));
             }
-            _collector.emit(tuple,new Values(matrixC));
+            _collector.emit(tuple,new Values(vectorC));
             _collector.ack(tuple);
         }
         public void cleanup(){
@@ -131,17 +125,13 @@ public class MatrixMultiplyOnStorm {
         public void declareOutputFields(OutputFieldsDeclarer declarer){
         }
         public void execute(Tuple tuple){
-            float[] matrixC = (float[])tuple.getValue(0);
-            int matrixN= (int)Math.sqrt(matrixC.length);
+            ArrayList<Float> vectorC = (ArrayList<Float>)tuple.getValue(0);
             try{
-                for(int i = 0; i < matrixN;i++){
-                    for(int j = 0; j < matrixN;i++)
-                    {
-                        dos.writeFloat(matrixC[i * matrixN + j]);
-                        dos.writeChar(32); // 空格
-                    }
-                    dos.writeChar(13); // 换行
+                for(int i = 0; i < vectorC.size();i++){
+                    dos.writeFloat(vectorC.get(i));
+                    dos.writeChar(32); // 空格
                 }
+                dos.writeChar(13); // 换行
             }catch (Exception e){
                 e.printStackTrace();
             }
@@ -205,7 +195,7 @@ public class MatrixMultiplyOnStorm {
 
     public static void main(String[] args) throws Exception{
         if(args == null ||args.length <9){
-            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond matrixSize resultFilePath isDebug");
+            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond vectorSize resultFilePath isDebug");
         }else{
             int spoutNum = Integer.valueOf(args[0]);
             int bolt1Num = Integer.valueOf(args[1]);
@@ -224,15 +214,15 @@ public class MatrixMultiplyOnStorm {
             TopologyBuilder builder = new TopologyBuilder();
 
 
-            builder.setSpout("matrixGenerator",new MatrixGenerator(ratePerSecond,matrixSize),spoutNum);
-            builder.setBolt("matrixMultiply",new MatrixMultiply(),bolt1Num).shuffleGrouping("matrixGenerator");
-            builder.setBolt("resultWriter",new ResultWriter(filePath),bolt2Num).shuffleGrouping("matrixMultiply");
+            builder.setSpout("vectorGenerator",new VectorGenerator(ratePerSecond,matrixSize),spoutNum);
+            builder.setBolt("vectorMultiply",new VectorMultiply(),bolt1Num).shuffleGrouping("vectorGenerator");
+            builder.setBolt("resultWriter",new ResultWriter(filePath),bolt2Num).shuffleGrouping("vectorMultiply");
 
             conf.setNumWorkers(numWorkers);
             conf.setNumAckers(numAckers);
             conf.setDebug(isDebug);
 
-            String name = "MatrixMultiplyOnStorm"; //拓扑名称
+            String name = "VectorMultiplyOnStorm"; //拓扑名称
 
             StormSubmitter.submitTopologyWithProgressBar(name, conf, builder.createTopology());
 
