@@ -89,6 +89,11 @@ public class MatrixMultiplyOnStorm {
             float[] matrixA = (float[])tuple.getValue(0);
             float[] matrixB = (float[])tuple.getValue(1);
             int matrixN= (int)Math.sqrt(matrixA.length);
+            System.out.println("the matrix size: " + matrixN + "x" + matrixN);
+            for(int i = 0; i< matrixA.length; i++){
+                System.out.print(matrixA[i] + " ");
+                if(i % 10 == 0) System.out.println();
+            }
             float[] matrixC = new float[matrixA.length];
             for(int i = 0; i < matrixN; i++){
                 for(int j = 0; i < matrixN;i++){
@@ -174,7 +179,7 @@ public class MatrixMultiplyOnStorm {
         long failed = 0;
         double weightedAvgTotal = 0.0;
         for (ExecutorSummary exec: info.get_executors()) {
-            if ("spout".equals(exec.get_component_id())) {
+            if ("matrixGenerator".equals(exec.get_component_id())) {
                 SpoutStats stats = exec.get_stats().get_specific().get_spout();
                 Map<String, Long> failedMap = stats.get_failed().get(":all-time");
                 Map<String, Long> ackedMap = stats.get_acked().get(":all-time");

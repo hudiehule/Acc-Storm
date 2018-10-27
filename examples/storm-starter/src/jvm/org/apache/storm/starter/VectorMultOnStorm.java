@@ -28,8 +28,8 @@ public class VectorMultOnStorm {
 
     public static class VectorGenerator extends BaseRichSpout{
         SpoutOutputCollector _collector;
-        ArrayList<Float> vectorA;
-        ArrayList<Float> vectorB;
+        float[] vectorA;
+        float[] vectorB;
         long _periodNano;
         long _emitAmount;
         Random _rand;
@@ -44,8 +44,8 @@ public class VectorMultOnStorm {
                 _periodNano = Long.MAX_VALUE - 1;
                 _emitAmount = 1;
             }
-            vectorA = new ArrayList<>(vectorSize);
-            vectorB = new ArrayList<>(vectorSize);
+            vectorA = new float[vectorSize];
+            vectorB = new float[vectorSize];
             this.vectorSize = vectorSize;
         }
         @Override
@@ -55,8 +55,8 @@ public class VectorMultOnStorm {
             _nextEmitTime = System.nanoTime();
             _emitsLeft = _emitAmount;
             for(int i = 0; i < vectorSize;i++){
-                vectorA.add(_rand.nextFloat());
-                vectorB.add(_rand.nextFloat());
+                vectorA[i] = _rand.nextFloat();
+                vectorB[i] = _rand.nextFloat();
             }
         }
         @Override
@@ -86,12 +86,16 @@ public class VectorMultOnStorm {
              declarer.declare(new Fields("vectorC"));
         }
         public void execute(Tuple tuple){
-            ArrayList<Float> vectorA = ( ArrayList<Float>)tuple.getValue(0);
-            ArrayList<Float> vectorB = ( ArrayList<Float>)tuple.getValue(0);
-            int vectorSize = vectorA.size();
-            ArrayList<Float> vectorC = new ArrayList<>(vectorSize);
+            float[] vectorA = (float[])tuple.getValue(0);
+            float[] vectorB = ( float[])tuple.getValue(0);
+            int vectorSize = vectorA.length;
+            System.out.println("the vector size: " + vectorSize);
+            for(int i = 0; i< vectorSize;i++){
+                System.out.print(vectorA[i] + " ");
+            }
+            float[] vectorC = new float[vectorSize];
             for(int i = 0; i < vectorSize; i++){
-                vectorC.add(vectorA.get(i) * vectorB.get(i));
+                vectorC[i] = vectorA[i] * vectorB[i];
             }
             _collector.emit(tuple,new Values(vectorC));
             _collector.ack(tuple);
@@ -125,10 +129,10 @@ public class VectorMultOnStorm {
         public void declareOutputFields(OutputFieldsDeclarer declarer){
         }
         public void execute(Tuple tuple){
-            ArrayList<Float> vectorC = (ArrayList<Float>)tuple.getValue(0);
+            float[] vectorC = (float[])tuple.getValue(0);
             try{
-                for(int i = 0; i < vectorC.size();i++){
-                    dos.writeFloat(vectorC.get(i));
+                for(int i = 0; i < vectorC.length;i++){
+                    dos.writeFloat(vectorC[i]);
                     dos.writeChar(32); // 空格
                 }
                 dos.writeChar(13); // 换行
@@ -164,7 +168,7 @@ public class VectorMultOnStorm {
         long failed = 0;
         double weightedAvgTotal = 0.0;
         for (ExecutorSummary exec: info.get_executors()) {
-            if ("spout".equals(exec.get_component_id())) {
+            if ("vectorGenerator".equals(exec.get_component_id())) {
                 SpoutStats stats = exec.get_stats().get_specific().get_spout();
                 Map<String, Long> failedMap = stats.get_failed().get(":all-time");
                 Map<String, Long> ackedMap = stats.get_acked().get(":all-time");
