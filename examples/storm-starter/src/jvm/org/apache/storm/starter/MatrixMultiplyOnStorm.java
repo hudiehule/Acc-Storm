@@ -34,7 +34,7 @@ public class MatrixMultiplyOnStorm {
         Random _rand;
         long _nextEmitTime;
         long _emitsLeft;
-        int matrixN;
+        int matrixSize;
         public MatrixGenerator(long ratePerSecond, int matrixN){
             if (ratePerSecond > 0) {
                 _periodNano = Math.max(1, 1000000000/ratePerSecond);
@@ -45,7 +45,7 @@ public class MatrixMultiplyOnStorm {
             }
             matrixA = new float[matrixN * matrixN];
             matrixB = new float[matrixN * matrixN];
-            this.matrixN = matrixN;
+            this.matrixSize = matrixN * matrixN;
         }
         @Override
         public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
@@ -53,10 +53,9 @@ public class MatrixMultiplyOnStorm {
              this._rand = ThreadLocalRandom.current();
             _nextEmitTime = System.nanoTime();
             _emitsLeft = _emitAmount;
-             for(int i = 0; i < matrixN * matrixN;i++){
-                     matrixA[i] = _rand.nextFloat();
-                     matrixB[i] = _rand.nextFloat();
-
+             for(int i = 0; i < matrixSize;i++){
+                 matrixA[i] = _rand.nextFloat();
+                 matrixB[i] = _rand.nextFloat();
              }
         }
         @Override
@@ -88,7 +87,7 @@ public class MatrixMultiplyOnStorm {
         public void execute(Tuple tuple){
             float[] matrixA = (float[])tuple.getValue(0);
             float[] matrixB = (float[])tuple.getValue(1);
-            int matrixN= (int)Math.sqrt(matrixA.length);
+            int matrixN= (int)Math.sqrt((double)matrixA.length);
             System.out.println("the matrix size: " + matrixN + "x" + matrixN);
             for(int i = 0; i< matrixA.length; i++){
                 System.out.print(matrixA[i] + " ");
@@ -137,16 +136,13 @@ public class MatrixMultiplyOnStorm {
         }
         public void execute(Tuple tuple){
             float[] matrixC = (float[])tuple.getValue(0);
-            int matrixN= (int)Math.sqrt(matrixC.length);
+            int matrixSize= matrixC.length;
             try{
-                for(int i = 0; i < matrixN;i++){
-                    for(int j = 0; j < matrixN;i++)
-                    {
-                        dos.writeFloat(matrixC[i * matrixN + j]);
-                        dos.writeChar(32); // 空格
-                    }
-                    dos.writeChar(13); // 换行
+                for(int i = 0; i < matrixSize;i++){
+                    dos.writeFloat(matrixC[matrixSize]);
+                    dos.writeChar(32); // 空格
                 }
+                dos.writeChar(13); // 换行
             }catch (Exception e){
                 e.printStackTrace();
             }

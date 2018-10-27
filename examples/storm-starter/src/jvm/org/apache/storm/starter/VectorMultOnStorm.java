@@ -89,10 +89,6 @@ public class VectorMultOnStorm {
             float[] vectorA = (float[])tuple.getValue(0);
             float[] vectorB = ( float[])tuple.getValue(0);
             int vectorSize = vectorA.length;
-            System.out.println("the vector size: " + vectorSize);
-            for(int i = 0; i< vectorSize;i++){
-                System.out.print(vectorA[i] + " ");
-            }
             float[] vectorC = new float[vectorSize];
             for(int i = 0; i < vectorSize; i++){
                 vectorC[i] = vectorA[i] * vectorB[i];
