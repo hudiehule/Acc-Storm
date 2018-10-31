@@ -18,8 +18,6 @@ import org.apache.storm.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -213,7 +211,7 @@ public class MatrixMultiplyOnStorm {
 
     public static void main(String[] args) throws Exception{
         if(args == null ||args.length <8){
-            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond matrixSize isDebug");
+            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond matrixN isDebug");
         }else{
             int spoutNum = Integer.valueOf(args[0]);
             int bolt1Num = Integer.valueOf(args[1]);
@@ -223,8 +221,8 @@ public class MatrixMultiplyOnStorm {
             int numWorkers = Integer.valueOf(args[4]);
 
             int ratePerSecond = Integer.valueOf(args[5]);
-            int matrixSize = Integer.valueOf(args[6]);
-          //  String filePath = args[7];
+            int matrixN = Integer.valueOf(args[6]);
+            //    String filePath = args[7];
             boolean isDebug = Boolean.valueOf(args[7]);
 
             Config conf = new Config();
@@ -232,7 +230,7 @@ public class MatrixMultiplyOnStorm {
             TopologyBuilder builder = new TopologyBuilder();
 
 
-            builder.setSpout("matrixGenerator",new MatrixGenerator(ratePerSecond,matrixSize),spoutNum);
+            builder.setSpout("matrixGenerator",new MatrixGenerator(ratePerSecond,matrixN),spoutNum);
             builder.setBolt("matrixMultiply",new MatrixMultiply(),bolt1Num).shuffleGrouping("matrixGenerator");
             builder.setBolt("resultWriter",new ResultWriter(),bolt2Num).shuffleGrouping("matrixMultiply");
 

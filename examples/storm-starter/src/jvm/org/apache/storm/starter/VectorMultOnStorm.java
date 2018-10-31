@@ -90,7 +90,7 @@ public class VectorMultOnStorm {
         }
         public void execute(Tuple tuple){
             float[] vectorA = (float[])tuple.getValue(0);
-            float[] vectorB = ( float[])tuple.getValue(0);
+            float[] vectorB = (float[])tuple.getValue(1);
             int vectorSize = vectorA.length;
             float sum = 0;
             for(int i = 0; i < vectorSize; i++){
@@ -129,7 +129,7 @@ public class VectorMultOnStorm {
         public void declareOutputFields(OutputFieldsDeclarer declarer){
         }
         public void execute(Tuple tuple){
-            float[] vectorC = (float[])tuple.getValue(0);
+            float vectorInnerProduct = tuple.getFloat(0);
             /*try{
                 for(int i = 0; i < vectorC.length;i++){
                     dos.writeFloat(vectorC[i]);
@@ -139,15 +139,7 @@ public class VectorMultOnStorm {
             }catch (Exception e){
                 e.printStackTrace();
             }*/
-            StringBuilder b = new StringBuilder();
-            b.append('[');
-            for(int i = 0; i< 10;i++){
-                b.append(vectorC[i]);
-                if(i == 9) b.append(']');
-                else b.append(", ");
-            }
-            LOG.info(b.toString());
-            LOG.info(Arrays.toString(vectorC));
+            LOG.info("InnerProduct: " + vectorInnerProduct);
             _collector.ack(tuple);
         }
         public void cleanup(){
