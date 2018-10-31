@@ -88,11 +88,6 @@ public class MatrixMultiplyOnStorm {
             float[] matrixA = (float[])tuple.getValue(0);
             float[] matrixB = (float[])tuple.getValue(1);
             int matrixN= (int)Math.sqrt((double)matrixA.length);
-            System.out.println("the matrix size: " + matrixN + "x" + matrixN);
-            for(int i = 0; i< matrixA.length; i++){
-                System.out.print(matrixA[i] + " ");
-                if(i % 10 == 0) System.out.println();
-            }
             float[] matrixC = new float[matrixA.length];
             for(int i = 0; i < matrixN; i++){
                 for(int j = 0; i < matrixN;i++){
@@ -139,7 +134,7 @@ public class MatrixMultiplyOnStorm {
             int matrixSize= matrixC.length;
             try{
                 for(int i = 0; i < matrixSize;i++){
-                    dos.writeFloat(matrixC[matrixSize]);
+                    dos.writeFloat(matrixC[i]);
                     dos.writeChar(32); // 空格
                 }
                 dos.writeChar(13); // 换行
