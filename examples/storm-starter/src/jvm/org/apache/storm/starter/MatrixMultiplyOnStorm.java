@@ -15,8 +15,11 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.apache.storm.utils.NimbusClient;
 import org.apache.storm.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -87,7 +90,7 @@ public class MatrixMultiplyOnStorm {
         public void execute(Tuple tuple){
             float[] matrixA = (float[])tuple.getValue(0);
             float[] matrixB = (float[])tuple.getValue(1);
-            int matrixN= (int)Math.sqrt((double)matrixA.length);
+            int matrixN= (int)Math.sqrt(matrixA.length);
             float[] matrixC = new float[matrixA.length];
             for(int i = 0; i < matrixN; i++){
                 for(int j = 0; i < matrixN;i++){
@@ -107,16 +110,17 @@ public class MatrixMultiplyOnStorm {
     }
 
     public static class ResultWriter extends BaseRichBolt{
+        private static final Logger LOG = LoggerFactory.getLogger(ResultWriter.class);
         OutputCollector _collector;
-        String filePath;
+        /*String filePath;
         FileOutputStream fos = null;
         DataOutputStream dos = null;
         public ResultWriter(String filePath){
             this.filePath = filePath;
-        }
+        }*/
         public void prepare(Map conf,TopologyContext context,OutputCollector collector){
             _collector = collector;
-            try{
+            /*try{
                 File file = new File(filePath);
                 if(!file.exists()){
                     file.createNewFile();
@@ -125,13 +129,13 @@ public class MatrixMultiplyOnStorm {
                 dos = new DataOutputStream(fos);
             }catch (Exception e){
                 e.printStackTrace();
-            }
+            }*/
         }
         public void declareOutputFields(OutputFieldsDeclarer declarer){
         }
         public void execute(Tuple tuple){
             float[] matrixC = (float[])tuple.getValue(0);
-            int matrixSize= matrixC.length;
+            /*int matrixSize= matrixC.length;
             try{
                 for(int i = 0; i < matrixSize;i++){
                     dos.writeFloat(matrixC[i]);
@@ -140,16 +144,24 @@ public class MatrixMultiplyOnStorm {
                 dos.writeChar(13); // 换行
             }catch (Exception e){
                 e.printStackTrace();
+            }*/
+            StringBuilder b = new StringBuilder();
+            b.append('[');
+            for(int i = 0; i< 10;i++){
+                b.append(matrixC[i]);
+                if(i == 9) b.append(']');
+                else b.append(", ");
             }
+            LOG.info(b.toString());
             _collector.ack(tuple);
         }
         public void cleanup(){
-            try{
+           /* try{
                 dos.close();
                 fos.close();
             }catch (Exception e){
                 e.printStackTrace();
-            }
+            }*/
         }
     }
 
@@ -170,7 +182,7 @@ public class MatrixMultiplyOnStorm {
         long failed = 0;
         double weightedAvgTotal = 0.0;
         for (ExecutorSummary exec: info.get_executors()) {
-            if ("matrixGenerator".equals(exec.get_component_id())) {
+            if ("vectorGenerator".equals(exec.get_component_id())) {
                 SpoutStats stats = exec.get_stats().get_specific().get_spout();
                 Map<String, Long> failedMap = stats.get_failed().get(":all-time");
                 Map<String, Long> ackedMap = stats.get_acked().get(":all-time");
@@ -201,7 +213,7 @@ public class MatrixMultiplyOnStorm {
 
     public static void main(String[] args) throws Exception{
         if(args == null ||args.length <9){
-            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond matrixSize resultFilePath isDebug");
+            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond matrixSize isDebug");
         }else{
             int spoutNum = Integer.valueOf(args[0]);
             int bolt1Num = Integer.valueOf(args[1]);
@@ -212,8 +224,8 @@ public class MatrixMultiplyOnStorm {
 
             int ratePerSecond = Integer.valueOf(args[5]);
             int matrixSize = Integer.valueOf(args[6]);
-            String filePath = args[7];
-            boolean isDebug = Boolean.valueOf(args[8]);
+          //  String filePath = args[7];
+            boolean isDebug = Boolean.valueOf(args[7]);
 
             Config conf = new Config();
 
@@ -222,7 +234,7 @@ public class MatrixMultiplyOnStorm {
 
             builder.setSpout("matrixGenerator",new MatrixGenerator(ratePerSecond,matrixSize),spoutNum);
             builder.setBolt("matrixMultiply",new MatrixMultiply(),bolt1Num).shuffleGrouping("matrixGenerator");
-            builder.setBolt("resultWriter",new ResultWriter(filePath),bolt2Num).shuffleGrouping("matrixMultiply");
+            builder.setBolt("resultWriter",new ResultWriter(),bolt2Num).shuffleGrouping("matrixMultiply");
 
             conf.setNumWorkers(numWorkers);
             conf.setNumAckers(numAckers);
