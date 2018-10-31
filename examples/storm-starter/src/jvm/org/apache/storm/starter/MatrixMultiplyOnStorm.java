@@ -212,7 +212,7 @@ public class MatrixMultiplyOnStorm {
     }
 
     public static void main(String[] args) throws Exception{
-        if(args == null ||args.length <9){
+        if(args == null ||args.length <8){
             System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond matrixSize isDebug");
         }else{
             int spoutNum = Integer.valueOf(args[0]);
