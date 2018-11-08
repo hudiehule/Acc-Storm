@@ -24,11 +24,14 @@ public class TupleBuffers {
         isArrays = new boolean[dataTypeNum];
         bufferSizes = new int[dataTypeNum];
         buffers = new TupleElementBuffer[dataTypeNum];
+        DataType dataType;
+        boolean isArray;
         for(int i = 0; i<dataTypeNum;i++){
-            DataType dataType = tupleEleTypes[i].type;
-            boolean isArray = tupleEleTypes[i].isArray;
+            dataType = tupleEleTypes[i].type;
+            isArray= tupleEleTypes[i].isArray;
             isArrays[i] = isArray;
             int arraySize = tupleEleTypes[i].arraySize;
+            bufferTypes[i] = dataType;
             bufferSizes[i] = arraySize * batchSize;
             buffers[i] = new TupleElementBuffer(dataType, isArray, batchSize, arraySize);
         }

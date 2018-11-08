@@ -25,13 +25,13 @@ public class NativeBufferManager {
         }
     }
 
-    public void crateSharedMemory(int[] inputBuffersize,DataType[] inputTupleEleTypes,int[] outputBufferSize, DataType[] outputTupleEleTypes){
+    public void crateSharedMemory(int[] inputBufferSize,DataType[] inputTupleEleTypes,int[] outputBufferSize, DataType[] outputTupleEleTypes){
         int inputShmNum = inputTupleEleTypes.length;
         int outputShmNum = outputTupleEleTypes.length;
         inputShmid = new int[inputShmNum];
         outputShmid = new int[outputShmNum];
         for(int i = 0; i<inputShmNum;i++){
-            inputShmid[i] = shmGet(inputBuffersize[i],inputTupleEleTypes[i].dataTypeFlag);
+            inputShmid[i] = shmGet(inputBufferSize[i],inputTupleEleTypes[i].dataTypeFlag);
         }
         for(int i = 0;i<outputShmNum;i++){
             outputShmid[i] = shmGet(outputBufferSize[i],outputTupleEleTypes[i].dataTypeFlag);
