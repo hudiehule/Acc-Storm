@@ -37,6 +37,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     private WaitingForResults waitingForResultsThread;
    // private AtomicBoolean waiting;
     private Queue<Tuple> pendings;
+    private int count = 0;
 
     public abstract List<Object> getInputTupleValues(Tuple input);
     class WaitingForResults extends Thread{
@@ -185,7 +186,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
 
     @Override
     public void accExecute(Tuple input){
-        if(bufferManager.isInputBufferFull()){
+        if(count == batchSize){
             /*while(!lastBatchFinished){ //当上一批的结果还未返回时 持续进行检查 此处阻塞
             }*/
             long batchStartTime = System.nanoTime(); // 一个batch开始计算
@@ -208,9 +209,11 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             一旦这个batch的结果返回，则可以直接将这个刚缓冲的数据发送到native然后继续进行处理 类似CPU的流水线技术 所以这里是否要建立双缓冲
             等待计算结果？阻塞？不应该阻塞？
              */
+            count = 0;
         }
         bufferManager.putInputTupleValuesToBuffer(getInputTupleValues(input)); //缓冲未满则直接将数据放入缓冲区
         //这里不能直接ack 放入到一个队列中，等待结果回传以后再ack
+        count++;
         pendings.offer(input);
     }
 

@@ -48,7 +48,6 @@ public class ComponentConnectionToNative {
             LOG.error(e.getMessage());
             e.printStackTrace();
         }
-        waitingForResult();
     }
 
 

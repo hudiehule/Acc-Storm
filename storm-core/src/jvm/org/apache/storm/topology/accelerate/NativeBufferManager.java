@@ -70,6 +70,7 @@ public class NativeBufferManager {
             switch(inputBuffer.bufferTypes[i]){
                 case INT: {
                     putIntToNativeShm(inputShmid[i],inputBuffer.buffers[i].getIntBuffer(),size);
+                    break;
                 }
                 case FLOAT: {
                     putFloatToNativeShm(inputShmid[i],inputBuffer.buffers[i].getFloatBuffer(),size);
@@ -156,6 +157,7 @@ public class NativeBufferManager {
                     }
                     case STRING: {
                         getStringFromNativeShm(outputShmid[i],outputBuffers.buffers[i].getStringBuffer(),size);
+                        break;
                     }
                 }
             }
