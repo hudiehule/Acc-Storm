@@ -117,7 +117,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
 
     public BaseRichAccBolt(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, int batchSize,String kernelFunctionName,int tupleParallelism){ // the sequence of the tupleElements must be corresponding to the sequence of of the kernel function'parameters
         this.batchSize = batchSize;
-        this.inputTupleEleTypes =inputTupleEleTypes;
+        this.inputTupleEleTypes = inputTupleEleTypes;
         this.outputTupleEleTypes = outputTupleEleTypes;
         this.kernelFunctionName = kernelFunctionName;
         this.tupleParallelism = tupleParallelism;

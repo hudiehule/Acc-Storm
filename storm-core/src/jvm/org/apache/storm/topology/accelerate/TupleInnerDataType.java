@@ -1,9 +1,11 @@
 package org.apache.storm.topology.accelerate;
 
+import java.io.Serializable;
+
 /**
  * Created by Administrator on 2018/10/27.
  */
-public class TupleInnerDataType {
+public class TupleInnerDataType implements Serializable{
     public DataType type; // 数据类型，是枚举类型
     public boolean isArray; //是否是数组
     public int arraySize;  //数组大小
