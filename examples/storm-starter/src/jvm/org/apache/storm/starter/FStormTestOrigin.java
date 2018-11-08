@@ -9,6 +9,8 @@ import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.topology.accelerate.BaseRichAccBolt;
+import org.apache.storm.topology.accelerate.DataType;
+import org.apache.storm.topology.accelerate.TupleInnerDataType;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.topology.base.BaseRichSpout;
 import org.apache.storm.tuple.Fields;
@@ -17,6 +19,7 @@ import org.apache.storm.tuple.Values;
 import org.apache.storm.utils.NimbusClient;
 import org.apache.storm.utils.Utils;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -96,12 +99,17 @@ public class FStormTestOrigin {
     }
     public static class MapBolt extends BaseRichAccBolt {
         private OutputCollector collector;
-        public MapBolt(Class[] inputTupleEleTypes,Class[] outputTupleEleTypes,int batchSize,int tupleParallelism, String kernelName){
-            super(inputTupleEleTypes,outputTupleEleTypes,batchSize,tupleParallelism,kernelName);
+        public MapBolt(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, int batchSize, String kernelName){
+            super(inputTupleEleTypes,outputTupleEleTypes,batchSize,kernelName);
         }
         public void prepare(Map stormConf, TopologyContext context,OutputCollector collector){
             this.collector = collector;
             System.out.println("Acc bolt preparation");
+        }
+
+        @Override
+        public List<Object> getInputTupleValues(Tuple input){
+            return input.getValues();
         }
         @Override
         public void execute(Tuple tuple){
@@ -210,7 +218,7 @@ public class FStormTestOrigin {
 
             builder.setSpout("spout",new FStormTestTopology.DataSpout(sleepTime),spoutNum);
             builder.setBolt("split",new FStormTestTopology.SplitBolt(),bolt1Num).shuffleGrouping("spout");
-            builder.setAccBolt("compute",new FStormTestTopology.MapBolt(new Class[]{char.class}, new Class[]{int.class},batchSize,1,"compute")).shuffleGrouping("split");
+            builder.setAccBolt("compute",new MapBolt(new TupleInnerDataType[]{new TupleInnerDataType(DataType.CHAR)}, new TupleInnerDataType[]{new TupleInnerDataType(DataType.INT)},batchSize,"compute")).shuffleGrouping("split");
             builder.setBolt("view",new FStormTestTopology.ViewBolt(),bolt2Num).shuffleGrouping("compute");
 
             conf.setNumWorkers(numWorkers);
