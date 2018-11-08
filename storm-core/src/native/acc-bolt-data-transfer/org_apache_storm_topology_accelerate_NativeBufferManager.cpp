@@ -65,7 +65,7 @@ JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
          }
          jint shmid = shmget(IPC_PRIVATE,data_type_size * size,0666|IPC_CREAT);
          if(shmid == -1){
-             fprintf(stderr,"data type str : %s, data_type_size : %d, shmget failed! info: %s\n",data_type_str,data_type_size,strerror(errno));
+             fprintf(stderr,"data type flag : %s, data_type_size : %d, shmget failed! info: %s\n",data_type_flag,data_type_size,strerror(errno));
              exit(EXIT_FAILURE);
          }
          // 初始化data_flag的值
@@ -76,7 +76,6 @@ JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
              data_flag->output_flag = OUTPUT_DATA_CONSUMED;
              if(shmdt(shared_memory) == -1){
                 fprintf(stderr,"shmdt failed\n");
-                env->ReleaseStringUTFChars(data_type,data_type_str);
                 exit(EXIT_FAILURE);
              }
          }
