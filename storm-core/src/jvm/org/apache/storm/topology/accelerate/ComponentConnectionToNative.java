@@ -38,7 +38,7 @@ public class ComponentConnectionToNative {
      * @param kernelFunctionName the kernel function name of this component
      */
     public void sendInitialOpenCLProgramRequest(String exeKernelFile,String kernelFunctionName,
-                                      int batchSize,int tupleParallelism,String[] inputDataTypes,int[] inShmids,String[] outputDataTypes,int[] outShmids,int shmFlagid){
+                                      int batchSize,int tupleParallelism,TupleInnerDataType[] inputDataTypes,int[] inShmids,TupleInnerDataType[] outputDataTypes,int[] outShmids,int shmFlagid){
         String message = Messages.constructStartOpenCLRuntimeMsg(exeKernelFile,kernelFunctionName,batchSize,tupleParallelism,inputDataTypes,inShmids,outputDataTypes,outShmids,shmFlagid);
         try{
             byte[] b = message.getBytes();
@@ -48,6 +48,7 @@ public class ComponentConnectionToNative {
             LOG.error(e.getMessage());
             e.printStackTrace();
         }
+        waitingForResult();
     }
 
 
@@ -67,16 +68,6 @@ public class ComponentConnectionToNative {
             return false;
         }
 
-    }
-
-    private void serializeAndSendString(String msg){
-        try{
-            byte[] b = msg.getBytes();
-            out.write(b);
-            out.flush();
-        }catch(Exception e){
-            e.printStackTrace();
-        }
     }
 
     public void close(){

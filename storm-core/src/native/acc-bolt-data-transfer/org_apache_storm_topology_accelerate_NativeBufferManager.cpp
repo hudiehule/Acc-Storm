@@ -9,15 +9,16 @@
 #include <errno.h>
 #include "org_apache_storm_topology_accelerate_NativeBufferManager.h"
 
-const char* INTTYPE = "int";
-const char* SHORTTYPE = "short";
-const char* LONGTYPE = "long";
-const char* DOUBLETYPE = "double";
-const char* FLOATTYPE = "float";
-const char* CHARTYPE = "char";
-const char* BYTETYPE = "byte";
-const char* BOOLEANTYPE = "boolean";
-const char* INPUT_AND_OUTPUT_FLAG_TYPE = "INPUT_AND_OUTPUT_FLAG_TYPE";
+const int BYTETYPE = 0;
+const int SHORTTYPE = 1;
+const int INTTYPE = 2;
+const int LONGTYPE = 3;
+const int FLOATTYPE = 4;
+const int DOUBLETYPE = 5;
+const int BOOLEANTYPE = 6;
+const int CHARTYPE = 7;
+const int STRINGTYPE = 8;
+const int INPUT_AND_OUTPUT_FLAG_TYPE = 9;
 
 const int INPUT_DATA_READY = 1;
 const int INPUT_DATA_CONSUMED = 0;
@@ -36,32 +37,28 @@ struct shared_data_flag {
  * Signature: (IILjava/lang/String;)I
  */
 JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferManager_shmGet
-  (JNIEnv * env, jobject obj, jint size, jstring data_type){
+  (JNIEnv * env, jobject obj, jint size, jint data_type_flag){
          int data_type_size=0;
-         const char *data_type_str;
-         data_type_str = (const char *)env->GetStringUTFChars(data_type,NULL);
-         if(data_type_str == NULL){
-             fprintf(stderr,"get data type failed\n");
-             exit(EXIT_FAILURE);
-         }
-         if(strcmp(data_type_str,INPUT_AND_OUTPUT_FLAG_TYPE) == 0){
+         if(data_type_flag == INPUT_AND_OUTPUT_FLAG_TYPE){
               data_type_size = sizeof(struct shared_data_flag);
-         }else if(strcmp(data_type_str,INTTYPE) == 0){
+         }else if(data_type_flag == INTTYPE){
              data_type_size = sizeof(int);
-         }else if(strcmp(data_type_str,SHORTTYPE) == 0){
+         }else if(data_type_flag == SHORTTYPE){
              data_type_size = sizeof(short);
-         }else if(strcmp(data_type_str,LONGTYPE) == 0){
+         }else if(data_type_flag == LONGTYPE){
              data_type_size = sizeof(long);
-         }else if(strcmp(data_type_str,DOUBLETYPE) == 0){
+         }else if(data_type_flag == DOUBLETYPE){
              data_type_size = sizeof(double);
-         }else if(strcmp(data_type_str,FLOATTYPE) == 0){
+         }else if(data_type_flag == FLOATTYPE){
              data_type_size = sizeof(float);
-         }else if(strcmp(data_type_str,CHARTYPE) == 0){
+         }else if(data_type_flag == CHARTYPE){
              data_type_size = sizeof(char);
-         }else if(strcmp(data_type_str,BYTETYPE) == 0){
+         }else if(data_type_flag == BYTETYPE){
              data_type_size = sizeof(char);
-         }else if(strcmp(data_type_str,BOOLEANTYPE) == 0){
+         }else if(data_type_flag == BOOLEANTYPE){
              data_type_size = sizeof(bool);
+         }else if(data_type_flag == STRINGTYPE){
+             data_type_size = sizeof(char) * 50;
          }else{
              fprintf(stderr,"data_type is invalid\n");
              exit(EXIT_FAILURE);
@@ -72,7 +69,7 @@ JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
              exit(EXIT_FAILURE);
          }
          // 初始化data_flag的值
-         if(strcmp(data_type_str,INPUT_AND_OUTPUT_FLAG_TYPE) == 0){
+         if(data_type_flag == INPUT_AND_OUTPUT_FLAG_TYPE){
              void * shared_memory = shmat(shmid,(void *)0,0);
              struct shared_data_flag * data_flag = (struct shared_data_flag * )shared_memory;
              data_flag->input_flag = INPUT_DATA_CONSUMED;
@@ -83,7 +80,6 @@ JNIEXPORT jint JNICALL Java_org_apache_storm_topology_accelerate_NativeBufferMan
                 exit(EXIT_FAILURE);
              }
          }
-         env->ReleaseStringUTFChars(data_type,data_type_str);
          return shmid;
   }
 /*

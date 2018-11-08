@@ -44,8 +44,6 @@ public class MatrixMultiplyOnStorm {
                 _periodNano = Long.MAX_VALUE - 1;
                 _emitAmount = 1;
             }
-            matrixA = new float[matrixN * matrixN];
-            matrixB = new float[matrixN * matrixN];
             this.matrixSize = matrixN * matrixN;
         }
         @Override
@@ -54,6 +52,8 @@ public class MatrixMultiplyOnStorm {
              this._rand = ThreadLocalRandom.current();
             _nextEmitTime = System.nanoTime();
             _emitsLeft = _emitAmount;
+            matrixA = new float[matrixSize];
+            matrixB = new float[matrixSize];
              for(int i = 0; i < matrixSize;i++){
                  matrixA[i] = _rand.nextFloat();
                  matrixB[i] = _rand.nextFloat();
@@ -92,11 +92,9 @@ public class MatrixMultiplyOnStorm {
             float[] matrixC = new float[matrixA.length];
             for(int i = 0; i < matrixN; i++){
                 for(int j = 0; i < matrixN;i++){
-                    int sum = 0;
                     for(int k = 0; k < matrixN;k++){
-                        sum += matrixA[i * matrixN + k] * matrixB[k * matrixN + j];
+                        matrixC[i * matrixN + j] += matrixA[i * matrixN + k] * matrixB[k * matrixN + j];
                     }
-                    matrixC[i * matrixN + j] = sum;
                 }
             }
             _collector.emit(tuple,new Values(matrixC));
@@ -180,7 +178,7 @@ public class MatrixMultiplyOnStorm {
         long failed = 0;
         double weightedAvgTotal = 0.0;
         for (ExecutorSummary exec: info.get_executors()) {
-            if ("vectorGenerator".equals(exec.get_component_id())) {
+            if ("matrixGenerator".equals(exec.get_component_id())) {
                 SpoutStats stats = exec.get_stats().get_specific().get_spout();
                 Map<String, Long> failedMap = stats.get_failed().get(":all-time");
                 Map<String, Long> ackedMap = stats.get_acked().get(":all-time");

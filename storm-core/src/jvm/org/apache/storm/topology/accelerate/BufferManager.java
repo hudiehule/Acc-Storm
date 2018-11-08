@@ -24,7 +24,7 @@ public class BufferManager {
      */
     private void initialShm(){
        // generateShmKeys(inputBufferShmKeys,outputBufferShmKeys);
-        nativeBufferManager.crateSharedMemory(inputBuffer.bufferSize,inputBuffer.types,outputBuffer.types);
+        nativeBufferManager.crateSharedMemory(inputBuffer.bufferSizes,inputBuffer.bufferTypes,outputBuffer.bufferSizes,outputBuffer.bufferTypes);
         nativeBufferManager.createInputAndOutputFlagShm();
     }
 
@@ -42,21 +42,20 @@ public class BufferManager {
     public int getInputAndOutputFlagShmid(){
         return nativeBufferManager.getShmFlagid();
     }
-    public void putInputTupleToBuffer(Tuple tuple){
-         List<Object> tupleElements = tuple.getValues();
-         inputBuffer.addTuple(tupleElements);
+    public void putInputTupleValuesToBuffer(List<Object> tupleValues){
+         inputBuffer.putTupleValues(tupleValues);
     }
 
     public void waitAndPollOutputTupleEleFromShm() throws Exception{
         try{
-            nativeBufferManager.waitAndPollOutputTupleEleFromShm(outputBuffer.bufferSize,outputBuffer);
+            nativeBufferManager.waitAndPollOutputTupleEleFromShm(outputBuffer.bufferSizes,outputBuffer);
         }catch(Exception e){
             throw e;
         }
     }
 
     public void pushInputTuplesFromBufferToShmAndStartKernel(){
-         nativeBufferManager.pushInputTuplesFromBufferToShmAndStartKernel(inputBuffer.bufferSize,inputBuffer);
+         nativeBufferManager.pushInputTuplesFromBufferToShmAndStartKernel(inputBuffer.bufferSizes,inputBuffer);
          inputBuffer.resetBuffers();
     }
 

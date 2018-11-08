@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 public class NativeBufferManager {
     private static final Logger LOG = LoggerFactory.getLogger(NativeBufferManager.class);
     private static boolean nativeLibraryLoaded = false;
-    private static final String INPUT_AND_OUTPUT_FLAG_TYPE = "INPUT_AND_OUTPUT_FLAG_TYPE";
+    private static final int INPUT_AND_OUTPUT_FLAG_TYPE = 9;
     private static int shmFlagid;
     private int[] inputShmid; // 存放已经建立过的输入共享内存标识符
     private int[] outputShmid; // 存放已经建立的输出共享内存标识符
@@ -25,16 +25,16 @@ public class NativeBufferManager {
         }
     }
 
-    public void crateSharedMemory(int size,String[] inputTupleEleTypes,String[] outputTupleEleTypes){
+    public void crateSharedMemory(int[] inputBuffersize,DataType[] inputTupleEleTypes,int[] outputBufferSize, DataType[] outputTupleEleTypes){
         int inputShmNum = inputTupleEleTypes.length;
         int outputShmNum = outputTupleEleTypes.length;
         inputShmid = new int[inputShmNum];
         outputShmid = new int[outputShmNum];
         for(int i = 0; i<inputShmNum;i++){
-            inputShmid[i] = shmGet(size,inputTupleEleTypes[i]);
+            inputShmid[i] = shmGet(inputBuffersize[i],inputTupleEleTypes[i].dataTypeFlag);
         }
         for(int i = 0;i<outputShmNum;i++){
-            outputShmid[i] = shmGet(size,outputTupleEleTypes[i]);
+            outputShmid[i] = shmGet(outputBufferSize[i],outputTupleEleTypes[i].dataTypeFlag);
         }
       /*  inputShmid = shmGet(size,inputShmKeys,inputTupleEleTypes);
         outputShmid = shmGet(size,outputShmKeys,outputTupleEleTypes);*/
@@ -60,75 +60,47 @@ public class NativeBufferManager {
     public int getShmFlagid(){
         return shmFlagid;
     }
-    public void pushInputTuplesFromBufferToShmAndStartKernel(int size, TupleBuffers buffers){
+    public void pushInputTuplesFromBufferToShmAndStartKernel(int[] sizes, TupleBuffers inputBuffer){
         //等待input data flag的值为0 表示可以向共享内存传送数据了
         long wstime = System.nanoTime();
         waitInputDataConsumed(shmFlagid);
         long wetime = System.nanoTime();
-        for(int i = 0; i < buffers.types.length;i++){
-            switch(buffers.types[i]){
-                case "int": {
-                    int[] temp = new int[size];
-                    for(int j = 0;j< size;j++){
-                        temp[j] = (int)(buffers.buffers[i].get(j));
-                    }
-                    putIntToNativeShm(inputShmid[i],temp,size);
+        for(int i = 0; i < inputBuffer.bufferTypes.length;i++){
+            int size = sizes[i];
+            switch(inputBuffer.bufferTypes[i]){
+                case INT: {
+                    putIntToNativeShm(inputShmid[i],inputBuffer.buffers[i].getIntBuffer(),size);
+                }
+                case FLOAT: {
+                    putFloatToNativeShm(inputShmid[i],inputBuffer.buffers[i].getFloatBuffer(),size);
                     break;
                 }
-                case "boolean": {
-                    boolean[] temp = new boolean[size];
-                    for(int j = 0;j< size;j++){
-                        temp[j] = (boolean)(buffers.buffers[i].get(j));
-                    }
-                    putBooleanToNativeShm(inputShmid[i],temp,size);
+                case BOOLEAN: {
+                    putBooleanToNativeShm(inputShmid[i],inputBuffer.buffers[i].getBooleanBuffer(),size);
                     break;
                 }
-                case "short": {
-                    short[] temp = new short[size];
-                    for(int j = 0;j< size;j++){
-                        temp[j] = (short)(buffers.buffers[i].get(j));
-                    }
-                    putShortToNativeShm(inputShmid[i],temp,size);
+                case SHORT: {
+                    putShortToNativeShm(inputShmid[i],inputBuffer.buffers[i].getShortBuffer(),size);
                     break;
                 }
-                case "byte": {
-                    byte[] temp = new byte[size];
-                    for(int j = 0;j< size;j++){
-                        temp[j] = (byte)(buffers.buffers[i].get(j));
-                    }
-                    putByteToNativeShm(inputShmid[i],temp,size);
+                case BYTE: {
+                    putByteToNativeShm(inputShmid[i],inputBuffer.buffers[i].getByteBuffer(),size);
                     break;
                 }
-                case "float": {
-                    float[] temp = new float[size];
-                    for(int j = 0;j< size;j++){
-                        temp[j] = (float)(buffers.buffers[i].get(j));
-                    }
-                    putFloatToNativeShm(inputShmid[i],temp,size);
+                case DOUBLE: {
+                    putDoubleToNativeShm(inputShmid[i],inputBuffer.buffers[i].getDoubleBuffer(),size);
                     break;
                 }
-                case "double": {
-                    double[] temp = new double[size];
-                    for(int j = 0;j< size;j++){
-                        temp[j] = (double)(buffers.buffers[i].get(j));
-                    }
-                    putDoubleToNativeShm(inputShmid[i],temp,size);
+                case LONG: {
+                    putLongToNativeShm(inputShmid[i],inputBuffer.buffers[i].getLongBuffer(),size);
                     break;
                 }
-                case "long": {
-                    long[] temp = new long[size];
-                    for(int j = 0;j< size;j++){
-                        temp[j] = (long)(buffers.buffers[i].get(j));
-                    }
-                    putLongToNativeShm(inputShmid[i],temp,size);
+                case CHAR: {
+                    putCharToNativeShm(inputShmid[i],inputBuffer.buffers[i].getCharBuffer(),size);
                     break;
                 }
-                case "char": {
-                    char[] temp = new char[size];
-                    for(int j = 0;j< size;j++){
-                        temp[j] = (char)(buffers.buffers[i].get(j));
-                    }
-                    putCharToNativeShm(inputShmid[i],temp,size);
+                case STRING: {
+                    putStringToNativeShm(inputShmid[i], inputBuffer.buffers[i].getStringBuffer(),size);
                     break;
                 }
             }
@@ -136,83 +108,54 @@ public class NativeBufferManager {
         //设置input flag 为1 表示共享内存的数据已经准备好 内核可以进行计算了
         setInputDataReady(shmFlagid);
         long dtime = System.nanoTime();
-
         LOG.info("wait for input data Consumed time: " + (wetime-wstime) + ", dataTransferTime: " + (dtime - wetime));
     }
 
-    public void waitAndPollOutputTupleEleFromShm(int size,TupleBuffers buffers) throws Exception{
+    public void waitAndPollOutputTupleEleFromShm(int[] sizes,TupleBuffers outputBuffers) throws Exception{
         //首先等待outputFlag 的值为1 表示结果可取
         try{
             long wstime = System.nanoTime();
             waitOutputDataReady(shmFlagid);
             long wetime = System.nanoTime();
-            buffers.resetBuffers();
+            outputBuffers.resetBuffers();
             LOG.info("start poll data form native machine");
-            for(int i = 0; i <buffers.types.length;i++){
-                switch(buffers.types[i]){
-                    case "int":{
-                        int[] temp = new int[size];
-                        getIntFromNativeShm(outputShmid[i],temp,size);
-                        for(int j = 0;j<size;j++){
-                            buffers.buffers[i].put(temp[j]);
-                        }
+            for(int i = 0; i <outputBuffers.bufferTypes.length;i++){
+                int size = sizes[i];
+                switch(outputBuffers.bufferTypes[i]){
+                    case INT:{
+                        getIntFromNativeShm(outputShmid[i],outputBuffers.buffers[i].getIntBuffer(),size);
                         break;
                     }
-                    case "boolean":{
-                        boolean[] temp = new boolean[size];
-                        getBooleanFromNativeShm(outputShmid[i],temp,size);
-                        for(int j = 0;j<size;j++){
-                            buffers.buffers[i].put(temp[j]);
-                        }
+                    case BOOLEAN:{
+                        getBooleanFromNativeShm(outputShmid[i],outputBuffers.buffers[i].getBooleanBuffer(),size);
                         break;
                     }
-                    case "short":{
-                        short[] temp = new short[size];
-                        getShortFromNativeShm(outputShmid[i],temp,size);
-                        for(int j = 0;j<size;j++){
-                            buffers.buffers[i].put(temp[j]);
-                        }
+                    case SHORT:{
+                        getShortFromNativeShm(outputShmid[i],outputBuffers.buffers[i].getShortBuffer(),size);
                         break;
                     }
-                    case "byte":{
-                        byte[] temp = new byte[size];
-                        getByteFromNativeShm(outputShmid[i],temp,size);
-                        for(int j = 0;j<size;j++){
-                            buffers.buffers[i].put(temp[j]);
-                        }
+                    case BYTE:{
+                        getByteFromNativeShm(outputShmid[i],outputBuffers.buffers[i].getByteBuffer(),size);
                         break;
                     }
-                    case "float":{
-                        float[] temp = new float[size];
-                        getFloatFromNativeShm(outputShmid[i],temp,size);
-                        for(int j = 0;j<size;j++){
-                            buffers.buffers[i].put(temp[j]);
-                        }
+                    case FLOAT:{
+                        getFloatFromNativeShm(outputShmid[i],outputBuffers.buffers[i].getFloatBuffer(),size);
                         break;
                     }
-                    case "double":{
-                        double[] temp = new double[size];
-                        getDoubleFromNativeShm(outputShmid[i],temp,size);
-                        for(int j = 0;j<size;j++){
-                            buffers.buffers[i].put(temp[j]);
-                        }
+                    case DOUBLE:{
+                        getDoubleFromNativeShm(outputShmid[i],outputBuffers.buffers[i].getDoubleBuffer(),size);
                         break;
                     }
-                    case "long":{
-                        long[] temp = new long[size];
-                        getLongFromNativeShm(outputShmid[i],temp,size);
-                        for(int j = 0;j<size;j++){
-                            buffers.buffers[i].put(temp[j]);
-                        }
+                    case LONG:{
+                        getLongFromNativeShm(outputShmid[i],outputBuffers.buffers[i].getLongBuffer(),size);
                         break;
                     }
-                    case "char":{
-                        char[] temp = new char[size];
-                        getCharFormNativeShm(outputShmid[i],temp,size);
-                        for(int j = 0;j<size;j++){
-                            buffers.buffers[i].put(temp[j]);
-                        }
+                    case CHAR:{
+                        getCharFormNativeShm(outputShmid[i],outputBuffers.buffers[i].getCharBuffer(),size);
                         break;
+                    }
+                    case STRING: {
+                        getStringFromNativeShm(outputShmid[i],outputBuffers.buffers[i].getStringBuffer(),size);
                     }
                 }
             }
@@ -224,7 +167,7 @@ public class NativeBufferManager {
         }
     }
     // 该函数返回的是创建的共享内存标识符
-    public native int shmGet(int size,String shmTypes);
+    public native int shmGet(int size,int shmTypeFlag);
     // public native void shmClear(int[] shmids);
 
     public native boolean putIntToNativeShm(int shmid, int[] data,int size);
@@ -235,6 +178,7 @@ public class NativeBufferManager {
     public native boolean putBooleanToNativeShm(int shmid, boolean[] data, int size);
     public native boolean putFloatToNativeShm(int shmid, float[] data, int size);
     public native boolean putDoubleToNativeShm(int shmid, double[] data, int size);
+    public native boolean putStringToNativeShm(int shmid, String[] data, int size);
 
     public native void getIntFromNativeShm(int shmid,int[] data,int size);
     public native void getLongFromNativeShm(int shmid,long[] data, int size);
@@ -244,6 +188,7 @@ public class NativeBufferManager {
     public native void getBooleanFromNativeShm(int shmid,boolean[] data,int size);
     public native void getFloatFromNativeShm(int shmid,float[] data, int size);
     public native void getDoubleFromNativeShm(int shmid,double[] data, int size);
+    public native void getStringFromNativeShm(int shmid, String[] data, int size);
 
     public native void setInputDataReady(int shmid); //将inputFlag的值设置为1 表示输入的数据可用了
     public native void waitOutputDataReady(int shmid);  //阻塞等待ouputFlag的值为1 为1 就返回 不为1 就循环等待
