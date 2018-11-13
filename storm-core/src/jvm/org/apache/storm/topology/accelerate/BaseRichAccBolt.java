@@ -45,6 +45,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         volatile boolean listenning;
         Queue<Long> batchStartTimeQueue;
         Tuple temp;
+        Values[] values;
         public WaitingForResults(OutputCollector collector){
             this.collector = collector;
             this.listenning = true;
@@ -55,11 +56,12 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
                 while(listenning){
                     LOG.info("waiting for result form OpenCLHost");
                     bufferManager.waitAndPollOutputTupleEleFromShm();
-                    Values[] values = bufferManager.constructOutputData();
+                    values = bufferManager.constructOutputData();
                     for(int i = 0;i<values.length;i++){
                         temp = pendings.poll();
                         collector.emit(temp,values[i]);
                         collector.ack(temp);
+                        temp = null;
                     }
                     LOG.info("get result from openclHost,batchTime: " + (System.nanoTime() - batchStartTimeQueue.poll()));
                 }
@@ -189,9 +191,9 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         if(count == batchSize){
             /*while(!lastBatchFinished){ //当上一批的结果还未返回时 持续进行检查 此处阻塞
             }*/
-            long batchStartTime = System.nanoTime(); // 一个batch开始计算
+            LOG.info("the pending size is : " + pendings.size()); // 一个batch开始计算
             // 将每一个缓冲区的数据发送到共享内存中，发送完成以后将缓冲区清空 将缓冲区的isFull置为false 发送完成以后将共享存储中的inputflag的值设为1 表示数据准备好 kernel可以运行了
-            waitingForResultsThread.batchStartTimeQueue.offer(batchStartTime);
+            waitingForResultsThread.batchStartTimeQueue.offer(System.nanoTime());
             bufferManager.pushInputTuplesFromBufferToShmAndStartKernel(); //如果上一批数据还没被消费 将会等待在这里 阻塞函数
 
             // 此时有线程等待OpenCL Host将结果回传给这个executor 传回以后这个线程使用collector.emit一条条发送给下游，完成以后将lastBatchFinished置为true

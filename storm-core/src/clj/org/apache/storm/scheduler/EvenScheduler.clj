@@ -75,6 +75,17 @@
         assign-slots (filter #(contains? assign-supervisors (first %)) available-slots)]
     assign-slots))
 
+(defn- update-colls [slots]
+     (let [colls (filter (complement empty?) (sort-by count > (conj (rest slots) (into [] (rest (first slots))))))]
+       colls))
+
+(defn- new-sort-slots [all-slots]
+  (loop [result [] colls (sort-by count > (vals (group-by first all-slots)))]
+    (if (empty? colls)
+      result
+      (recur (conj result (first (first colls))) (update-colls colls))))
+  )
+
 ;;给有devices的slots排序
 (defn sort-slots-with-devices [slots-with-devices supervisorid-to-available-devices reassign-acc-executors]
   (let [group-slots-with-devices-by-id (group-by #(first %) slots-with-devices) ;;得到的是<suprvisor-id, slots的集合>这个map
@@ -82,7 +93,12 @@
                                                         :let [device-num (get supervisorid-to-available-devices supervisor-id)]]
                                                    {supervisor-id (take device-num (repeat-seq device-num slots))}))
         split-up (sort-by count > (vals group-sorted-slots-with-devices))]
-    (apply interleave-all split-up)))
+    ; (apply interleave-all split-up)
+    (loop [result [] colls split-up]
+      (if (empty? colls)
+        result
+        (recur (conj result (first (first colls))) (update-colls colls))))
+    ))
 
 ;;调度含有acc组件的topology
 (defn- schedule-acc-topology [^TopologyDetails topology ^Cluster cluster]
@@ -155,7 +171,7 @@
         general-executors-reassignment (into {}
                                              (map vector
                                                   reassign-general-executors
-                                                  (repeat-seq (count reassign-general-executors) (sort-slots new-assign-slots))))
+                                                  (repeat-seq (count reassign-general-executors) (new-sort-slots new-assign-slots))))
 
         total-assignment (into acc-executors-reassignment general-executors-reassignment)]
     (when-not (empty? total-assignment)
