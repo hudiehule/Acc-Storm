@@ -34,13 +34,14 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     private BufferManager bufferManager = null;
     private ComponentConnectionToNative connection;
 
-    private WaitingForResults waitingForResultsThread;
+    private ExecutorService singleThreadPool;
+    // private WaitingForResults waitingForResultsThread;
    // private AtomicBoolean waiting;
-    private Queue<Tuple> pendings;
+    private ArrayList<Tuple> pendings;
     private int count = 0;
 
     public abstract List<Object> getInputTupleValues(Tuple input);
-    class WaitingForResults extends Thread{
+    /*class WaitingForResults extends Thread{
         OutputCollector collector;
         volatile boolean listenning;
         Queue<Long> batchStartTimeQueue;
@@ -76,41 +77,36 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
             LOG.info("listening = " + this.listenning);
             this.listenning = false;
         }
-    }
+    }*/
 
-   /* class GettingResultsTask implements Runnable{
+    class GettingResultsTask implements Runnable{
         OutputCollector collector;
         long batchStartTime;
-        boolean listenning = true;
         List<Tuple> pendings;
-        public GettingResultsTask(OutputCollector collector,List<Tuple> tuples){
+        public GettingResultsTask(OutputCollector collector,List<Tuple> tuples,long startTime){
             this.collector = collector;
             this.pendings = new ArrayList<>(tuples);
+            this.batchStartTime = startTime;
         }
 
-        public void setBatchStartTime(long time){
-            this.batchStartTime = time;
-        }
         public void run(){
             try{
-                while(listenning){
-                    LOG.info("waiting for result form openclHost");
-                    bufferManager.waitAndPollOutputTupleEleFromShm();
-                    // long batchNativeTime = System.nanoTime() - batchStartTime;
-                    Values[] values = bufferManager.constructOutputData();
-                    for(int i = 0;i<values.length;i++){
-                        collector.emit(pendings.get(i), values[i]);
-                        collector.ack(pendings.get(i));
-                    }
-                    long batchEndTime = System.nanoTime();
-                    LOG.info("batch processing time :" + (batchEndTime - this.batchStartTime));
+                LOG.info("waiting for result form openclHost");
+                bufferManager.waitAndPollOutputTupleEleFromShm();
+                // long batchNativeTime = System.nanoTime() - batchStartTime;
+                Values[] values = bufferManager.constructOutputData();
+                for(int i = 0;i<values.length;i++){
+                    collector.emit(pendings.get(i), values[i]);
+                    collector.ack(pendings.get(i));
                 }
+                long batchEndTime = System.nanoTime();
+                LOG.info("batch processing time :" + (batchEndTime - this.batchStartTime));
             }catch (Exception e){
                 LOG.info("exception occur :" + e.toString());
                 e.printStackTrace();
             }
         }
-    }*/
+    }
 
 
     public void cleanupOpenCLProgram(){
@@ -124,7 +120,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         this.outputTupleEleTypes = outputTupleEleTypes;
         this.kernelFunctionName = kernelFunctionName;
         this.tupleParallelism = tupleParallelism;
-        this.pendings = new LinkedList<>();
+        this.pendings = new ArrayList<>(batchSize);
     }
     public BaseRichAccBolt(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes,String kernelName){
         this(inputTupleEleTypes,outputTupleEleTypes,DEFAULT_BATCH_SIZE,kernelName,1);
@@ -153,10 +149,11 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         connection.sendInitialOpenCLProgramRequest(exeKernelFile,kernelFunctionName,batchSize,tupleParallelism,
                 inputTupleEleTypes,bufferManager.getInputBufferShmids(),outputTupleEleTypes,bufferManager.getOutputBufferShmids(),bufferManager.getInputAndOutputFlagShmid());
         LOG.info("get the ack from the native");
-        this.waitingForResultsThread = new WaitingForResults(collector);
+        this.singleThreadPool = Executors.newSingleThreadExecutor();
+        /*this.waitingForResultsThread = new WaitingForResults(collector);
         waitingForResultsThread.setName("waitingForResultsThread");
         //  this.waiting = new AtomicBoolean(false);
-        waitingForResultsThread.start();
+        waitingForResultsThread.start();*/
         /*this.waitingForResultsThread = new WaitingForResults(collector);
         waitingForResultsThread.setName("waitingForResultsThread");
         //this.waiting = new AtomicBoolean(false);
@@ -175,12 +172,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         //发送消息给nativeMachine  将这个bolt对应的FPGA 的opencl资源都清除
       //  connection.cleanupOpenCLProgram(exeKernelFile,kernelFunctionName);
         LOG.info("close the BaseRichAccBolt");
-        if(!pendings.isEmpty()){
-            while(!pendings.isEmpty()){
-                accCollector.ack(pendings.poll());
-            }
-        }
-        waitingForResultsThread.shutdown(); //关闭线程
+        singleThreadPool.shutdown(); //关闭线程
         cleanupOpenCLProgram(); // 通过设置共享内存中input flag的值为-1 表示这个kernel可以停止运行了 native将会清理资源 包括清理共享内存的资源
 
         connection.close(); // 关闭socket连接
@@ -189,13 +181,12 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     @Override
     public void accExecute(Tuple input){
         if(count == batchSize){
-            /*while(!lastBatchFinished){ //当上一批的结果还未返回时 持续进行检查 此处阻塞
-            }*/
-            LOG.info("the pending size is : " + pendings.size()); // 一个batch开始计算
+          //  LOG.info("the pending size is : " + pendings.size()); // 一个batch开始计算
             // 将每一个缓冲区的数据发送到共享内存中，发送完成以后将缓冲区清空 将缓冲区的isFull置为false 发送完成以后将共享存储中的inputflag的值设为1 表示数据准备好 kernel可以运行了
-            waitingForResultsThread.batchStartTimeQueue.offer(System.nanoTime());
+            //waitingForResultsThread.batchStartTimeQueue.offer(System.nanoTime());
             bufferManager.pushInputTuplesFromBufferToShmAndStartKernel(); //如果上一批数据还没被消费 将会等待在这里 阻塞函数
-
+            singleThreadPool.submit(new GettingResultsTask(this.accCollector,pendings,System.nanoTime()));
+            pendings.clear();
             // 此时有线程等待OpenCL Host将结果回传给这个executor 传回以后这个线程使用collector.emit一条条发送给下游，完成以后将lastBatchFinished置为true
 
             // 设置waiting为true唤醒waitingForResult线程继续执行 等待OpenCL执行完kernel将结果传回来 并组装成tuple发送到下游
@@ -216,7 +207,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         bufferManager.putInputTupleValuesToBuffer(getInputTupleValues(input)); //缓冲未满则直接将数据放入缓冲区
         //这里不能直接ack 放入到一个队列中，等待结果回传以后再ack
         count++;
-        pendings.offer(input);
+        pendings.add(input);
     }
 
 }

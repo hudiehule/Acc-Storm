@@ -374,9 +374,7 @@ public class Cluster {
         for(SupervisorDetails supervisor : this.supervisors.values()){
             List<WorkerSlot> slotsList = this.getAvailableSlots(supervisor);
             if(!slotsList.isEmpty()){
-                List<WorkerSlot> slots = new ArrayList<>();
-                slots.addAll(this.getAvailableSlots(supervisor));
-                slotsMap.put(supervisor.getId(),slots);
+                slotsMap.put(supervisor.getId(),slotsList);
             }
         }
         return slotsMap;
