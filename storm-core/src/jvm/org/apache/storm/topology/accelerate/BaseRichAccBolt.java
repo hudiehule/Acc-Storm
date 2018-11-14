@@ -82,10 +82,10 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     class GettingResultsTask implements Runnable{
         OutputCollector collector;
         long batchStartTime;
-        List<Tuple> pendings;
+        List<Tuple> waitingForAck;
         public GettingResultsTask(OutputCollector collector,List<Tuple> tuples,long startTime){
             this.collector = collector;
-            this.pendings = new ArrayList<>(tuples);
+            this.waitingForAck = new ArrayList<>(tuples);
             this.batchStartTime = startTime;
         }
 
@@ -96,9 +96,10 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
                 // long batchNativeTime = System.nanoTime() - batchStartTime;
                 Values[] values = bufferManager.constructOutputData();
                 for(int i = 0;i<values.length;i++){
-                    collector.emit(pendings.get(i), values[i]);
-                    collector.ack(pendings.get(i));
+                    collector.emit(waitingForAck.get(i), values[i]);
+                    collector.ack(waitingForAck.get(i));
                 }
+                waitingForAck = null;
                 long batchEndTime = System.nanoTime();
                 LOG.info("batch processing time :" + (batchEndTime - this.batchStartTime));
             }catch (Exception e){
