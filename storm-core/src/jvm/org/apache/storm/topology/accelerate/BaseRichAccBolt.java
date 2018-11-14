@@ -82,10 +82,10 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     class GettingResultsTask implements Runnable{
         OutputCollector collector;
         long batchStartTime;
-        List<Tuple> waitingForAck;
+        List<Tuple> waitingForAck = new ArrayList<>(batchSize);
         public GettingResultsTask(OutputCollector collector,List<Tuple> tuples,long startTime){
             this.collector = collector;
-            this.waitingForAck = new ArrayList<>(tuples);
+            this.waitingForAck.addAll(tuples);
             this.batchStartTime = startTime;
         }
 
@@ -99,9 +99,11 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
                     collector.emit(waitingForAck.get(i), values[i]);
                     collector.ack(waitingForAck.get(i));
                 }
+                waitingForAck.clear();
                 waitingForAck = null;
-                long batchEndTime = System.nanoTime();
-                LOG.info("batch processing time :" + (batchEndTime - this.batchStartTime));
+                values = null;
+                LOG.info("batch processing time :" + (System.nanoTime() - this.batchStartTime));
+                collector = null;
             }catch (Exception e){
                 LOG.info("exception occur :" + e.toString());
                 e.printStackTrace();
@@ -172,6 +174,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     public void accCleanup(){
         //发送消息给nativeMachine  将这个bolt对应的FPGA 的opencl资源都清除
       //  connection.cleanupOpenCLProgram(exeKernelFile,kernelFunctionName);
+        cleanup();
         LOG.info("close the BaseRichAccBolt");
         singleThreadPool.shutdown(); //关闭线程
         cleanupOpenCLProgram(); // 通过设置共享内存中input flag的值为-1 表示这个kernel可以停止运行了 native将会清理资源 包括清理共享内存的资源
