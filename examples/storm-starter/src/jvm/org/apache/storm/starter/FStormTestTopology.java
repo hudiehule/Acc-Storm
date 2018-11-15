@@ -177,6 +177,7 @@ public class FStormTestTopology {
         }
         public void execute(Tuple tuple){
             int value = tuple.getInteger(0);
+            System.out.println("view result: " + value);
             _collector.ack(tuple);
         }
         public void cleanup(){

@@ -39,7 +39,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
    // private AtomicBoolean waiting;
     private ArrayList<Tuple> pendings;
     private int count = 0;
-
+    private int batch_count = 0;
     public abstract List<Object> getInputTupleValues(Tuple input);
     /*class WaitingForResults extends Thread{
         OutputCollector collector;
@@ -188,6 +188,8 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
           //  LOG.info("the pending size is : " + pendings.size()); // 一个batch开始计算
             // 将每一个缓冲区的数据发送到共享内存中，发送完成以后将缓冲区清空 将缓冲区的isFull置为false 发送完成以后将共享存储中的inputflag的值设为1 表示数据准备好 kernel可以运行了
             //waitingForResultsThread.batchStartTimeQueue.offer(System.nanoTime());
+            LOG.info("Batch-" + batch_count + "start to transfer");
+            batch_count++;
             bufferManager.pushInputTuplesFromBufferToShmAndStartKernel(); //如果上一批数据还没被消费 将会等待在这里 阻塞函数
             singleThreadPool.submit(new GettingResultsTask(this.accCollector,pendings,System.nanoTime()));
             pendings.clear();
