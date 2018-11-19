@@ -183,7 +183,61 @@ public class FStormTestTopology {
             System.out.println("view bolt cleanup");
         }
     }
+    private static long _prev_acked = 0;
+    private static long _prev_uptime = 0;
+    private static double _prev_weightedAvgTotal = 0;
 
+    public static void printMetrics(Nimbus.Client client, String name) throws Exception {
+        ClusterSummary summary = client.getClusterInfo();
+        String id = null;
+        for (TopologySummary ts: summary.get_topologies()) {
+            if (name.equals(ts.get_name())) {
+                id = ts.get_id();
+            }
+        }
+        if (id == null) {
+            throw new Exception("Could not find a topology named "+name);
+        }
+        TopologyInfo info = client.getTopologyInfo(id);
+        int uptime = info.get_uptime_secs();
+        long acked = 0;
+        long failed = 0;
+        double weightedAvgTotal = 0.0;
+        for (ExecutorSummary exec: info.get_executors()) {
+            if ("spout".equals(exec.get_component_id())) {
+                SpoutStats stats = exec.get_stats().get_specific().get_spout();
+                Map<String, Long> failedMap = stats.get_failed().get(":all-time");
+                Map<String, Long> ackedMap = stats.get_acked().get(":all-time");
+                Map<String, Double> avgLatMap = stats.get_complete_ms_avg().get(":all-time");
+                for (String key: ackedMap.keySet()) {
+                    if (failedMap != null) {
+                        Long tmp = failedMap.get(key);
+                        if (tmp != null) {
+                            failed += tmp;
+                        }
+                    }
+                    long ackVal = ackedMap.get(key);
+                    double latVal = avgLatMap.get(key) * ackVal;
+                    acked += ackVal;
+                    weightedAvgTotal += latVal;
+                }
+            }
+        }
+        long ackedThisTime = acked - _prev_acked;
+        long thisTime = uptime - _prev_uptime;
+        double weightedAvgTotalThisTime = weightedAvgTotal - _prev_weightedAvgTotal;
+        double avgLatencyThisTime = weightedAvgTotalThisTime/ackedThisTime;
+        _prev_uptime = uptime;
+        _prev_acked = acked;
+        _prev_weightedAvgTotal = weightedAvgTotal;
+        System.out.println("uptime: "+uptime + "-" + _prev_uptime +" ackedThisTime: "+ackedThisTime+" avgLatency: "+avgLatencyThisTime+" acked/sec: "+(((double)ackedThisTime)/thisTime+" failed: "+failed));
+    }
+
+    public static void kill(Nimbus.Client client, String name) throws Exception {
+        KillOptions opts = new KillOptions();
+        opts.set_wait_secs(0);
+        client.killTopologyWithOpts(name, opts);
+    }
 
     public static void main(String[] args) throws Exception{
         if(args == null ||args.length <8){
@@ -225,11 +279,12 @@ public class FStormTestTopology {
             clusterConf.putAll(Utils.readCommandLineOpts());
             Nimbus.Client client = NimbusClient.getConfiguredClient(clusterConf).getClient();
 
-            Thread.sleep(1000*60 * 10); //运行十分钟
-            //kill the topology
-            KillOptions opts = new KillOptions();
-            opts.set_wait_secs(0);
-            client.killTopologyWithOpts(name, opts);
+            //Sleep for 10 mins
+            for (int i = 0; i < 20; i++) {
+                Thread.sleep(30 * 1000);
+                printMetrics(client, name);
+            }
+            kill(client, name);
 
         }
 

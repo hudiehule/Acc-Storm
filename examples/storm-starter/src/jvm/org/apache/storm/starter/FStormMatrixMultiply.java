@@ -103,9 +103,11 @@ public class FStormMatrixMultiply {
             float[] matrixC = new float[matrixA.length];
             for(int i = 0; i < matrixN; i++){
                 for(int j = 0; i < matrixN;i++){
+                    float sum = 0;
                     for(int k = 0; k < matrixN;k++){
-                        matrixC[i * matrixN + j] += matrixA[i * matrixN + k] * matrixB[k * matrixN + j];
+                        sum += matrixA[i * matrixN + k] * matrixB[k * matrixN + j];
                     }
+                    matrixC[i * matrixN + j] = sum;
                 }
             }
             _collector.emit(tuple,new Values(matrixC));
@@ -143,6 +145,10 @@ public class FStormMatrixMultiply {
         }
     }
 
+    private static long _prev_acked = 0;
+    private static long _prev_uptime = 0;
+    private static double _prev_weightedAvgTotal = 0;
+
     public static void printMetrics(Nimbus.Client client, String name) throws Exception {
         ClusterSummary summary = client.getClusterInfo();
         String id = null;
@@ -179,8 +185,14 @@ public class FStormMatrixMultiply {
                 }
             }
         }
-        double avgLatency = weightedAvgTotal/acked;
-        System.out.println("uptime: "+uptime+" acked: "+acked+" avgLatency: "+avgLatency+" acked/sec: "+(((double)acked)/uptime+" failed: "+failed));
+        long ackedThisTime = acked - _prev_acked;
+        long thisTime = uptime - _prev_uptime;
+        double weightedAvgTotalThisTime = weightedAvgTotal - _prev_weightedAvgTotal;
+        double avgLatencyThisTime = weightedAvgTotalThisTime/ackedThisTime;
+        _prev_uptime = uptime;
+        _prev_acked = acked;
+        _prev_weightedAvgTotal = weightedAvgTotal;
+        System.out.println("uptime: "+uptime + "-" + _prev_uptime +" ackedThisTime: "+ackedThisTime+" avgLatency: "+avgLatencyThisTime+" acked/sec: "+(((double)ackedThisTime)/thisTime+" failed: "+failed));
     }
 
     public static void kill(Nimbus.Client client, String name) throws Exception {

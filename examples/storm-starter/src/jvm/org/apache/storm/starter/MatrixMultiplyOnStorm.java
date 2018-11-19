@@ -161,6 +161,10 @@ public class MatrixMultiplyOnStorm {
         }
     }
 
+    private static long _prev_acked = 0;
+    private static long _prev_uptime = 0;
+    private static double _prev_weightedAvgTotal = 0;
+
     public static void printMetrics(Nimbus.Client client, String name) throws Exception {
         ClusterSummary summary = client.getClusterInfo();
         String id = null;
@@ -197,8 +201,14 @@ public class MatrixMultiplyOnStorm {
                 }
             }
         }
-        double avgLatency = weightedAvgTotal/acked;
-        System.out.println("uptime: "+uptime+" acked: "+acked+" avgLatency: "+avgLatency+" acked/sec: "+(((double)acked)/uptime+" failed: "+failed));
+        long ackedThisTime = acked - _prev_acked;
+        long thisTime = uptime - _prev_uptime;
+        double weightedAvgTotalThisTime = weightedAvgTotal - _prev_weightedAvgTotal;
+        double avgLatencyThisTime = weightedAvgTotalThisTime/ackedThisTime;
+        _prev_uptime = uptime;
+        _prev_acked = acked;
+        _prev_weightedAvgTotal = weightedAvgTotal;
+        System.out.println("uptime: "+uptime + "-" + _prev_uptime +" ackedThisTime: "+ackedThisTime+" avgLatency: "+avgLatencyThisTime+" acked/sec: "+(((double)ackedThisTime)/thisTime+" failed: "+failed));
     }
 
     public static void kill(Nimbus.Client client, String name) throws Exception {
