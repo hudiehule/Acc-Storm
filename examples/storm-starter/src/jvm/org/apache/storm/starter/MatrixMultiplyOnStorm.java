@@ -54,10 +54,6 @@ public class MatrixMultiplyOnStorm {
             _emitsLeft = _emitAmount;
             matrixA = new float[matrixSize];
             matrixB = new float[matrixSize];
-             for(int i = 0; i < matrixSize;i++){
-                 matrixA[i] = _rand.nextFloat();
-                 matrixB[i] = _rand.nextFloat();
-             }
         }
         @Override
         public void nextTuple(){
@@ -67,6 +63,10 @@ public class MatrixMultiplyOnStorm {
             }
 
             if (_emitsLeft > 0) {
+                for(int i = 0; i < matrixSize;i++){
+                    matrixA[i] = _rand.nextFloat();
+                    matrixB[i] = _rand.nextFloat();
+                }
                 _collector.emit(new Values(matrixA,matrixB),_rand.nextInt());
                 _emitsLeft--;
             }
@@ -92,9 +92,11 @@ public class MatrixMultiplyOnStorm {
             float[] matrixC = new float[matrixA.length];
             for(int i = 0; i < matrixN; i++){
                 for(int j = 0; i < matrixN;i++){
+                    float sum = 0.0f;
                     for(int k = 0; k < matrixN;k++){
-                        matrixC[i * matrixN + j] += matrixA[i * matrixN + k] * matrixB[k * matrixN + j];
+                         sum += matrixA[i * matrixN + k] * matrixB[k * matrixN + j];
                     }
+                    matrixC[i * matrixN + j] = sum;
                 }
             }
             _collector.emit(tuple,new Values(matrixC));
@@ -205,10 +207,10 @@ public class MatrixMultiplyOnStorm {
         long thisTime = uptime - _prev_uptime;
         double weightedAvgTotalThisTime = weightedAvgTotal - _prev_weightedAvgTotal;
         double avgLatencyThisTime = weightedAvgTotalThisTime/ackedThisTime;
+        System.out.println("uptime: "+uptime + "-" + _prev_uptime +" ackedThisTime: "+ackedThisTime+" avgLatency: "+avgLatencyThisTime+" acked/sec: "+(((double)ackedThisTime)/thisTime+" failed: "+failed));
         _prev_uptime = uptime;
         _prev_acked = acked;
         _prev_weightedAvgTotal = weightedAvgTotal;
-        System.out.println("uptime: "+uptime + "-" + _prev_uptime +" ackedThisTime: "+ackedThisTime+" avgLatency: "+avgLatencyThisTime+" acked/sec: "+(((double)ackedThisTime)/thisTime+" failed: "+failed));
     }
 
     public static void kill(Nimbus.Client client, String name) throws Exception {
@@ -255,6 +257,7 @@ public class MatrixMultiplyOnStorm {
             clusterConf.putAll(Utils.readCommandLineOpts());
             Nimbus.Client client = NimbusClient.getConfiguredClient(clusterConf).getClient();
 
+            Thread.sleep(1000 * 30);
             for (int i = 0; i < 20; i++) {
                 Thread.sleep(30 * 1000);
                 printMetrics(client, name);

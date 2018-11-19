@@ -48,8 +48,6 @@ public class FStormVectorMultiply {
                 _periodNano = Long.MAX_VALUE - 1;
                 _emitAmount = 1;
             }
-            vectorA = new float[vectorSize];
-            vectorB = new float[vectorSize];
             this.vectorSize = vectorSize;
         }
         @Override
@@ -58,10 +56,8 @@ public class FStormVectorMultiply {
             this._rand = ThreadLocalRandom.current();
             _nextEmitTime = System.nanoTime();
             _emitsLeft = _emitAmount;
-            for(int i = 0; i < vectorSize;i++){
-                vectorA[i] = _rand.nextFloat();
-                vectorB[i] = _rand.nextFloat();
-            }
+            vectorA = new float[vectorSize];
+            vectorB = new float[vectorSize];
         }
         @Override
         public void nextTuple(){
@@ -71,6 +67,10 @@ public class FStormVectorMultiply {
             }
 
             if (_emitsLeft > 0) {
+                for(int i = 0; i < vectorSize;i++){
+                    vectorA[i] = _rand.nextFloat();
+                    vectorB[i] = _rand.nextFloat();
+                }
                 _collector.emit(new Values(vectorA,vectorB),_rand.nextInt());
                 _emitsLeft--;
             }
@@ -100,7 +100,7 @@ public class FStormVectorMultiply {
             float[] vectorA = (float[])tuple.getValue(0);
             float[] vectorB = (float[])tuple.getValue(1);
             int vectorSize = vectorA.length;
-            float sum = 0;
+            float sum = 0.0f;
             for(int i = 0; i < vectorSize; i++){
                 sum += vectorA[i] * vectorB[i];
             }
@@ -174,10 +174,10 @@ public class FStormVectorMultiply {
         long thisTime = uptime - _prev_uptime;
         double weightedAvgTotalThisTime = weightedAvgTotal - _prev_weightedAvgTotal;
         double avgLatencyThisTime = weightedAvgTotalThisTime/ackedThisTime;
+        System.out.println("uptime: "+uptime + "-" + _prev_uptime +" ackedThisTime: "+ackedThisTime+" avgLatency: "+avgLatencyThisTime+" acked/sec: "+(((double)ackedThisTime)/thisTime+" failed: "+failed));
         _prev_uptime = uptime;
         _prev_acked = acked;
         _prev_weightedAvgTotal = weightedAvgTotal;
-        System.out.println("uptime: "+uptime + "-" + _prev_uptime +" ackedThisTime: "+ackedThisTime+" avgLatency: "+avgLatencyThisTime+" acked/sec: "+(((double)ackedThisTime)/thisTime+" failed: "+failed));
     }
 
     public static void kill(Nimbus.Client client, String name) throws Exception {
@@ -229,6 +229,7 @@ public class FStormVectorMultiply {
             clusterConf.putAll(Utils.readCommandLineOpts());
             Nimbus.Client client = NimbusClient.getConfiguredClient(clusterConf).getClient();
 
+            Thread.sleep(1000 * 30);
             for (int i = 0; i < 20; i++) {
                 Thread.sleep(30 * 1000);
                 printMetrics(client, name);

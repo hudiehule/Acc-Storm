@@ -227,10 +227,10 @@ public class FStormTestTopology {
         long thisTime = uptime - _prev_uptime;
         double weightedAvgTotalThisTime = weightedAvgTotal - _prev_weightedAvgTotal;
         double avgLatencyThisTime = weightedAvgTotalThisTime/ackedThisTime;
+        System.out.println("uptime: "+uptime + "-" + _prev_uptime +" ackedThisTime: "+ackedThisTime+" avgLatency: "+avgLatencyThisTime+" acked/sec: "+(((double)ackedThisTime)/thisTime+" failed: "+failed));
         _prev_uptime = uptime;
         _prev_acked = acked;
         _prev_weightedAvgTotal = weightedAvgTotal;
-        System.out.println("uptime: "+uptime + "-" + _prev_uptime +" ackedThisTime: "+ackedThisTime+" avgLatency: "+avgLatencyThisTime+" acked/sec: "+(((double)ackedThisTime)/thisTime+" failed: "+failed));
     }
 
     public static void kill(Nimbus.Client client, String name) throws Exception {
@@ -279,6 +279,7 @@ public class FStormTestTopology {
             clusterConf.putAll(Utils.readCommandLineOpts());
             Nimbus.Client client = NimbusClient.getConfiguredClient(clusterConf).getClient();
 
+            Thread.sleep(1000 * 30);
             //Sleep for 10 mins
             for (int i = 0; i < 20; i++) {
                 Thread.sleep(30 * 1000);
