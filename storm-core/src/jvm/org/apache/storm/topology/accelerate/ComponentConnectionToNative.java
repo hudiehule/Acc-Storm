@@ -37,9 +37,12 @@ public class ComponentConnectionToNative {
      * @param exeKernelFile the file name of the executable kernel file
      * @param kernelFunctionName the kernel function name of this component
      */
-    public void sendInitialOpenCLProgramRequest(String exeKernelFile,String kernelFunctionName,
-                                      int batchSize,int tupleParallelism,TupleInnerDataType[] inputDataTypes,int[] inShmids,TupleInnerDataType[] outputDataTypes,int[] outShmids,int shmFlagid){
-        String message = Messages.constructStartOpenCLRuntimeMsg(exeKernelFile,kernelFunctionName,batchSize,tupleParallelism,inputDataTypes,inShmids,outputDataTypes,outShmids,shmFlagid);
+    public void sendInitialOpenCLProgramRequest(String exeKernelFile,String kernelFunctionName, int batchSize,int tupleParallelism,
+                                                TupleInnerDataType[] inputDataTypes,int[] inShmids,
+                                                TupleInnerDataType[] outputDataTypes,int[] outShmids,int shmFlagid,
+                                                ConstantParameter[] constantParameters){
+        String message = Messages.constructStartOpenCLRuntimeMsg(exeKernelFile,kernelFunctionName,batchSize,tupleParallelism,
+                inputDataTypes,inShmids,outputDataTypes,outShmids,shmFlagid,constantParameters);
         try{
             byte[] b = message.getBytes();
             out.write(b);

@@ -9,6 +9,7 @@ import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.topology.accelerate.BaseRichAccBolt;
+import org.apache.storm.topology.accelerate.ConstantParameter;
 import org.apache.storm.topology.accelerate.DataType;
 import org.apache.storm.topology.accelerate.TupleInnerDataType;
 import org.apache.storm.topology.base.BaseRichBolt;
@@ -84,8 +85,8 @@ public class FStormVectorMultiply {
 
     public static class VectorInnerProduct extends BaseRichAccBolt {
         private static final Logger LOG = LoggerFactory.getLogger(VectorInnerProduct.class);
-        public VectorInnerProduct(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, int batchSize, String kernelName){
-            super(inputTupleEleTypes,outputTupleEleTypes,batchSize,kernelName);
+        public VectorInnerProduct(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, ConstantParameter[] constants, int batchSize, String kernelName){
+            super(inputTupleEleTypes,outputTupleEleTypes,constants,batchSize,kernelName);
         }
         public List<Object> getInputTupleValues(Tuple tuple){
             return tuple.getValues();
@@ -218,6 +219,7 @@ public class FStormVectorMultiply {
                             new TupleInnerDataType(DataType.FLOAT,true,100)},
                     // output data type
                     new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT)},
+                    new ConstantParameter[]{new ConstantParameter(DataType.INT,500)},
                     100,"vector_mult"),bolt1Num).shuffleGrouping("vectorGenerator");
             builder.setBolt("resultWriter",new ResultWriter(),bolt2Num).shuffleGrouping("vectorInnerProduct");
             builder.setTopologyKernelFile("vector_mult");

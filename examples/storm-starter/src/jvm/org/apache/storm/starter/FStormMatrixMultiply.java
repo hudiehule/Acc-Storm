@@ -9,6 +9,7 @@ import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.topology.accelerate.BaseRichAccBolt;
+import org.apache.storm.topology.accelerate.ConstantParameter;
 import org.apache.storm.topology.accelerate.DataType;
 import org.apache.storm.topology.accelerate.TupleInnerDataType;
 import org.apache.storm.topology.base.BaseRichBolt;
@@ -82,8 +83,8 @@ public class FStormMatrixMultiply {
     }
 
     public static class MatrixMultiply extends BaseRichAccBolt{
-        public MatrixMultiply(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, int batchSize, String kernelName){
-            super(inputTupleEleTypes,outputTupleEleTypes,batchSize,kernelName);
+        public MatrixMultiply(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, ConstantParameter[] constantParameters,int batchSize, String kernelName){
+            super(inputTupleEleTypes,outputTupleEleTypes,constantParameters,batchSize,kernelName);
         }
         public List<Object> getInputTupleValues(Tuple tuple){
            return tuple.getValues();
@@ -102,7 +103,7 @@ public class FStormMatrixMultiply {
             int matrixN= (int)Math.sqrt(matrixA.length);
             float[] matrixC = new float[matrixA.length];
             for(int i = 0; i < matrixN; i++){
-                for(int j = 0; i < matrixN;i++){
+                for(int j = 0; j < matrixN;j++){
                     float sum = 0.0f;
                     for(int k = 0; k < matrixN;k++){
                         sum += matrixA[i * matrixN + k] * matrixB[k * matrixN + j];
@@ -137,7 +138,7 @@ public class FStormMatrixMultiply {
                 if(i == 9) b.append(']');
                 else b.append(", ");
             }
-            LOG.info(b.toString());
+            LOG.info("matrixC(first ten elements): " + b.toString());
             _collector.ack(tuple);
         }
         public void cleanup(){
@@ -220,15 +221,16 @@ public class FStormMatrixMultiply {
             Config conf = new Config();
 
             TopologyBuilder builder = new TopologyBuilder();
-
+            int matrixSize = matrixN * matrixN;
             builder.setSpout("matrixGenerator",new MatrixGenerator(ratePerSecond,matrixN),spoutNum);
             builder.setAccBolt("matrixMultiply",new MatrixMultiply(
                     // input data type
-                    new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,128),
-                                             new TupleInnerDataType(DataType.FLOAT,true,128)},
+                    new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,matrixSize),
+                                             new TupleInnerDataType(DataType.FLOAT,true,matrixSize)},
                     // output data type
-                    new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,128)},
-                    100,"matrix_mult"),bolt1Num).shuffleGrouping("matrixGenerator");
+                    new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,matrixSize)},
+                    new ConstantParameter[]{new ConstantParameter(DataType.INT,matrixN)},
+                    1000,"matrix_mult"),bolt1Num).shuffleGrouping("matrixGenerator");
             builder.setBolt("resultWriter",new ResultWriter(),bolt2Num)
                     .shuffleGrouping("matrixMultiply");
             builder.setTopologyKernelFile("matrix_mult");

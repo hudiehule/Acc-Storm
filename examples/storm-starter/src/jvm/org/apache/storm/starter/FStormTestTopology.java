@@ -15,6 +15,7 @@ import org.apache.storm.task.TopologyContext;
 
 import org.apache.storm.topology.*;
 import org.apache.storm.topology.accelerate.BaseRichAccBolt;
+import org.apache.storm.topology.accelerate.ConstantParameter;
 import org.apache.storm.topology.accelerate.DataType;
 import org.apache.storm.topology.accelerate.TupleInnerDataType;
 import org.apache.storm.topology.base.BaseRichBolt;
@@ -134,8 +135,8 @@ public class FStormTestTopology {
     }
     public static class MapBolt extends BaseRichAccBolt {
         private OutputCollector collector;
-        public MapBolt(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, int batchSize, String kernelName){
-            super(inputTupleEleTypes,outputTupleEleTypes,batchSize,kernelName);
+        public MapBolt(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, ConstantParameter[] constantParameters, int batchSize, String kernelName){
+            super(inputTupleEleTypes,outputTupleEleTypes,constantParameters,batchSize,kernelName);
         }
         public void prepare(Map stormConf, TopologyContext context,OutputCollector collector){
               this.collector = collector;
@@ -261,7 +262,7 @@ public class FStormTestTopology {
 
             builder.setSpout("spout",new DataSpout(ratePerSecond),spoutNum);
             builder.setBolt("split",new SplitBolt(),bolt1Num).shuffleGrouping("spout");
-            builder.setAccBolt("compute",new MapBolt(new TupleInnerDataType[]{new TupleInnerDataType(DataType.CHAR)}, new TupleInnerDataType[]{new TupleInnerDataType(DataType.INT)},batchSize,"compute")).shuffleGrouping("split");
+            builder.setAccBolt("compute",new MapBolt(new TupleInnerDataType[]{new TupleInnerDataType(DataType.CHAR)}, new TupleInnerDataType[]{new TupleInnerDataType(DataType.INT)},null,batchSize,"compute")).shuffleGrouping("split");
             builder.setBolt("view",new ViewBolt(),bolt2Num).shuffleGrouping("compute");
 
             conf.setNumWorkers(numWorkers);

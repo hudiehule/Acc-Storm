@@ -16,7 +16,9 @@ public class Messages {
     public static final String START_OPENCL_RUNTIME_ACK = "START_OPENCL_RUNTIME_ACK";
 
     public static String constructStartOpenCLRuntimeMsg(String aoclKernelFileName,String kernelFunctionName,int batchSize,int tupleParallelism,
-                                                        TupleInnerDataType[] inputDataTypes,int[] inShmids,TupleInnerDataType[] outputDataTypes,int[] outShmids,int shmFlagid){
+                                                        TupleInnerDataType[] inputDataTypes,int[] inShmids,
+                                                        TupleInnerDataType[] outputDataTypes,int[] outShmids,int shmFlagid,
+                                                        ConstantParameter[] constantParameters){
         StringBuilder builder = new StringBuilder(INITIAL_OPENCL_PROGRAM);
         builder.append("<aoclKernelFile>" + aoclKernelFileName + "<aoclKernelFile>");
         builder.append("<kernelFunctionName>" + kernelFunctionName + "<kernelFunctionName>");
@@ -36,6 +38,13 @@ public class Messages {
             builder.append("<"+ outputDataTypes[i].type.dataTypeFlag + "," + bufferSize + "," + outShmids[i] + ">");
         }
         builder.append("<outputDataInfo>");
+        builder.append("<constantParameters>");
+        if(constantParameters != null){
+            for(int i = 0 ; i< constantParameters.length; i++){
+                builder.append("<"+ constantParameters[i].type.dataTypeFlag + "," + constantParameters[i].value + ">");
+            }
+        }
+        builder.append("<constantParameters>");
         return builder.toString();
     }
 

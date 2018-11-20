@@ -90,13 +90,10 @@ public class MatrixMultiplyOnStorm {
         public void execute(Tuple tuple){
             float[] matrixA = (float[])tuple.getValue(0);
             float[] matrixB = (float[])tuple.getValue(1);
-            LOG.info("matrixA: "+ Arrays.toString(matrixA));
-            LOG.info("matrixB: "+ Arrays.toString(matrixB));
             int matrixN= (int)Math.sqrt(matrixA.length);
-            LOG.info("matrixN: "+ matrixN);
             float[] matrixC = new float[matrixA.length];
             for(int i = 0; i < matrixN; i++){
-                for(int j = 0; i < matrixN;i++){
+                for(int j = 0; j < matrixN;j++){
                     float sum = 0.0f;
                     for(int k = 0; k < matrixN;k++){
                          sum += matrixA[i * matrixN + k] * matrixB[k * matrixN + j];
@@ -148,14 +145,14 @@ public class MatrixMultiplyOnStorm {
             }catch (Exception e){
                 e.printStackTrace();
             }*/
-           /* StringBuilder b = new StringBuilder();
+            StringBuilder b = new StringBuilder();
             b.append('[');
             for(int i = 0; i< 10;i++){
                 b.append(matrixC[i]);
                 if(i == 9) b.append(']');
                 else b.append(", ");
-            }*/
-            LOG.info("matrixC: " + Arrays.toString(matrixC));
+            }
+            LOG.info("matrixC(first ten elements): " + b.toString());
             _collector.ack(tuple);
         }
         public void cleanup(){

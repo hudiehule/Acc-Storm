@@ -31,6 +31,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     private String kernelFunctionName;
     private TupleInnerDataType[] inputTupleEleTypes;
     private TupleInnerDataType[] outputTupleEleTypes;
+    private ConstantParameter[] constantParameters;
     private BufferManager bufferManager = null;
     private ComponentConnectionToNative connection;
 
@@ -116,22 +117,30 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
     }
 
 
-    public BaseRichAccBolt(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, int batchSize,String kernelFunctionName,int tupleParallelism){ // the sequence of the tupleElements must be corresponding to the sequence of of the kernel function'parameters
+    public BaseRichAccBolt(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, ConstantParameter[] constantParameters, int batchSize,String kernelFunctionName,int tupleParallelism){ // the sequence of the tupleElements must be corresponding to the sequence of of the kernel function'parameters
         this.batchSize = batchSize;
         this.inputTupleEleTypes = inputTupleEleTypes;
         this.outputTupleEleTypes = outputTupleEleTypes;
+        this.constantParameters = constantParameters;
         this.kernelFunctionName = kernelFunctionName;
         this.tupleParallelism = tupleParallelism;
         this.pendings = new ArrayList<>(batchSize);
     }
-    public BaseRichAccBolt(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes,String kernelName){
-        this(inputTupleEleTypes,outputTupleEleTypes,DEFAULT_BATCH_SIZE,kernelName,1);
+    public BaseRichAccBolt(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes,ConstantParameter[] constantParameters,String kernelName){
+        this(inputTupleEleTypes,outputTupleEleTypes,constantParameters,DEFAULT_BATCH_SIZE,kernelName,1);
     }
 
-    public BaseRichAccBolt(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes,int batchSize, String kernelName){
-        this(inputTupleEleTypes,outputTupleEleTypes,batchSize,kernelName,1);
+    public BaseRichAccBolt(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes,ConstantParameter[] constantParameters, int batchSize, String kernelName){
+        this(inputTupleEleTypes,outputTupleEleTypes,constantParameters,batchSize,kernelName,1);
     }
 
+    public BaseRichAccBolt(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, int batchSize, String kernelName,int tupleParallelism){
+        this(inputTupleEleTypes,outputTupleEleTypes,null,batchSize,kernelName,tupleParallelism);
+    }
+
+    public BaseRichAccBolt(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, int batchSize, String kernelName){
+        this(inputTupleEleTypes,outputTupleEleTypes,null,batchSize,kernelName,1);
+    }
 
     /**
      * 当这个bolt被调度在FPGA上执行时，执行prepareOpenCL
@@ -149,7 +158,7 @@ public abstract class BaseRichAccBolt extends BaseComponent implements IRichAccB
         //发送消息给nativeMachine 启动一个program 建立一个FPGA command，并且阻塞等待一个ack返回
         LOG.info("send initial opencl program info");
         connection.sendInitialOpenCLProgramRequest(exeKernelFile,kernelFunctionName,batchSize,tupleParallelism,
-                inputTupleEleTypes,bufferManager.getInputBufferShmids(),outputTupleEleTypes,bufferManager.getOutputBufferShmids(),bufferManager.getInputAndOutputFlagShmid());
+                inputTupleEleTypes,bufferManager.getInputBufferShmids(),outputTupleEleTypes,bufferManager.getOutputBufferShmids(),bufferManager.getInputAndOutputFlagShmid(),constantParameters);
         LOG.info("get the ack from the native");
         this.singleThreadPool = Executors.newSingleThreadExecutor();
         /*this.waitingForResultsThread = new WaitingForResults(collector);
