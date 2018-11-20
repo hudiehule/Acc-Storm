@@ -21,6 +21,7 @@ import org.apache.storm.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -82,6 +83,7 @@ public class FStormVectorMultiply {
     }
 
     public static class VectorInnerProduct extends BaseRichAccBolt {
+        private static final Logger LOG = LoggerFactory.getLogger(VectorInnerProduct.class);
         public VectorInnerProduct(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, int batchSize, String kernelName){
             super(inputTupleEleTypes,outputTupleEleTypes,batchSize,kernelName);
         }
@@ -100,6 +102,9 @@ public class FStormVectorMultiply {
             float[] vectorA = (float[])tuple.getValue(0);
             float[] vectorB = (float[])tuple.getValue(1);
             int vectorSize = vectorA.length;
+            LOG.info("vectorA: " + Arrays.toString(vectorA));
+            LOG.info("vectorB: " + Arrays.toString(vectorB));
+            LOG.info("vectorSize: "+ vectorSize);
             float sum = 0.0f;
             for(int i = 0; i < vectorSize; i++){
                 sum += vectorA[i] * vectorB[i];

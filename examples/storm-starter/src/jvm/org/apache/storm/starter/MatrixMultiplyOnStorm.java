@@ -18,6 +18,7 @@ import org.apache.storm.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -78,6 +79,7 @@ public class MatrixMultiplyOnStorm {
     }
 
     public static class MatrixMultiply extends BaseRichBolt {
+        private static final Logger LOG = LoggerFactory.getLogger(MatrixMultiply.class);
         OutputCollector _collector;
         public void prepare(Map conf,TopologyContext context,OutputCollector collector){
             _collector = collector;
@@ -88,7 +90,10 @@ public class MatrixMultiplyOnStorm {
         public void execute(Tuple tuple){
             float[] matrixA = (float[])tuple.getValue(0);
             float[] matrixB = (float[])tuple.getValue(1);
+            LOG.info("matrixA: "+ Arrays.toString(matrixA));
+            LOG.info("matrixB: "+ Arrays.toString(matrixB));
             int matrixN= (int)Math.sqrt(matrixA.length);
+            LOG.info("matrixN: "+ matrixN);
             float[] matrixC = new float[matrixA.length];
             for(int i = 0; i < matrixN; i++){
                 for(int j = 0; i < matrixN;i++){
@@ -143,14 +148,14 @@ public class MatrixMultiplyOnStorm {
             }catch (Exception e){
                 e.printStackTrace();
             }*/
-            StringBuilder b = new StringBuilder();
+           /* StringBuilder b = new StringBuilder();
             b.append('[');
             for(int i = 0; i< 10;i++){
                 b.append(matrixC[i]);
                 if(i == 9) b.append(']');
                 else b.append(", ");
-            }
-            LOG.info(b.toString());
+            }*/
+            LOG.info("matrixC: " + Arrays.toString(matrixC));
             _collector.ack(tuple);
         }
         public void cleanup(){
