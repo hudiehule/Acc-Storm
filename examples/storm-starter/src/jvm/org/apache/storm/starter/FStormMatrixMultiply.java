@@ -203,8 +203,8 @@ public class FStormMatrixMultiply {
     }
 
     public static void main(String[] args) throws Exception{
-        if(args == null ||args.length <8){
-            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond matrixN isDebug");
+        if(args == null ||args.length <9){
+            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond matrixN batchSize isDebug");
         }else{
             int spoutNum = Integer.valueOf(args[0]);
             int bolt1Num = Integer.valueOf(args[1]);
@@ -216,7 +216,8 @@ public class FStormMatrixMultiply {
             int ratePerSecond = Integer.valueOf(args[5]);
             int matrixN = Integer.valueOf(args[6]);
             //    String filePath = args[7];
-            boolean isDebug = Boolean.valueOf(args[7]);
+            int batchSize = Integer.valueOf(args[7]);
+            boolean isDebug = Boolean.valueOf(args[8]);
 
             Config conf = new Config();
 
@@ -230,7 +231,7 @@ public class FStormMatrixMultiply {
                     // output data type
                     new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,matrixSize)},
                     new ConstantParameter[]{new ConstantParameter(DataType.INT,matrixN)},
-                    1000,"matrixMult",matrixSize),bolt1Num).shuffleGrouping("matrixGenerator");
+                    batchSize,"matrixMult",matrixSize),bolt1Num).shuffleGrouping("matrixGenerator");
             builder.setBolt("resultWriter",new ResultWriter(),bolt2Num)
                     .shuffleGrouping("matrixMultiply");
             builder.setTopologyKernelFile("matrix_mult");

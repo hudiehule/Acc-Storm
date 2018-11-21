@@ -1,9 +1,13 @@
 package org.apache.storm.topology.accelerate;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Created by Administrator on 2018/11/7.
  */
 class TupleElementBuffer{
+    private static final Logger LOG = LoggerFactory.getLogger(TupleElementBuffer.class);
     byte[] bytes = null;
     short[] shorts = null;
     int[] ints = null;
@@ -28,6 +32,7 @@ class TupleElementBuffer{
         this.arraySize =arraySize;
         this.N = 0;
         this.bufferSize = batchSize * arraySize;
+        LOG.info("create a buffer , the size = " + bufferSize);
         switch(type){
             case BYTE: {
                 bytes = new byte[bufferSize];
@@ -240,58 +245,61 @@ class TupleElementBuffer{
     }
     Object[] getArray(int index){
         Object[] data = new Object[arraySize];
-        int end = (index + 1) * arraySize;
+        int start = index * arraySize;
+        int end = start + arraySize;
+        LOG.info("startIndex = " + start + " ,endIndex = " + end);
         switch (dataType){
             case BYTE: {
-                for(int i = index * arraySize; i < end; i++){
+                for(int i = start; i < end; i++){
                     data[i] = bytes[i];
                 }
                 return data;
             }
             case SHORT: {
-                for(int i = index * arraySize; i < end; i++){
+                for(int i = start; i < end; i++){
                     data[i] = shorts[i];
                 }
                 return data;
             }
             case INT: {
-                for(int i = index * arraySize; i < end; i++){
+                for(int i = start; i < end; i++){
                     data[i] = ints[i];
                 }
                 return data;
             }
             case LONG: {
-                for(int i = index * arraySize; i < end; i++){
+                for(int i = start; i < end; i++){
                     data[i] = longs[i];
                 }
                 return data;
             }
             case FLOAT: {
-                for(int i = index * arraySize; i < end; i++){
+                LOG.info("float buffer size = " + floats.length);
+                for(int i = start; i < end; i++){
                     data[i] = floats[i];
                 }
                 return data;
             }
             case DOUBLE: {
-                for(int i = index * arraySize; i < end; i++){
+                for(int i = start; i < end; i++){
                     data[i] = doubles[i];
                 }
                 return data;
             }
             case BOOLEAN: {
-                for(int i = index * arraySize; i < end; i++){
+                for(int i = start; i < end; i++){
                     data[i] = booleans[i];
                 }
                 return data;
             }
             case CHAR: {
-                for(int i = index * arraySize; i < end; i++){
+                for(int i = start; i < end; i++){
                     data[i] = chars[i];
                 }
                 return data;
             }
             case STRING: {
-                for(int i = index * arraySize; i < end; i++){
+                for(int i = start; i < end; i++){
                     data[i] = strings[i];
                 }
                 return data;

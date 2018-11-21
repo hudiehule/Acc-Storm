@@ -193,8 +193,8 @@ public class FStormVectorMultiply {
     }
 
     public static void main(String[] args) throws Exception{
-        if(args == null ||args.length <8){
-            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond vectorSize isDebug");
+        if(args == null ||args.length <9){
+            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond vectorSize batchSize isDebug");
         }else{
             int spoutNum = Integer.valueOf(args[0]);
             int bolt1Num = Integer.valueOf(args[1]);
@@ -205,7 +205,8 @@ public class FStormVectorMultiply {
 
             int ratePerSecond = Integer.valueOf(args[5]);
             int vectorSize = Integer.valueOf(args[6]);
-            boolean isDebug = Boolean.valueOf(args[7]);
+            int batchSize = Integer.valueOf(args[7]);
+            boolean isDebug = Boolean.valueOf(args[8]);
 
             Config conf = new Config();
 
@@ -220,7 +221,7 @@ public class FStormVectorMultiply {
                     // output data type
                     new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT)},
                     new ConstantParameter[]{new ConstantParameter(DataType.INT,500)},
-                    100,"vectorMult",vectorSize),bolt1Num).shuffleGrouping("vectorGenerator");
+                    batchSize,"vectorMult",vectorSize),bolt1Num).shuffleGrouping("vectorGenerator");
             builder.setBolt("resultWriter",new ResultWriter(),bolt2Num).shuffleGrouping("vectorInnerProduct");
             builder.setTopologyKernelFile("vector_mult");
             conf.setNumWorkers(numWorkers);
