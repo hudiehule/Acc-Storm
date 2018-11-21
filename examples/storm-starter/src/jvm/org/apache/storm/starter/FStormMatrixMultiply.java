@@ -230,7 +230,7 @@ public class FStormMatrixMultiply {
                     // output data type
                     new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,matrixSize)},
                     new ConstantParameter[]{new ConstantParameter(DataType.INT,matrixN)},
-                    1000,"matrix_mult"),bolt1Num).shuffleGrouping("matrixGenerator");
+                    1000,"matrixMult"),bolt1Num).shuffleGrouping("matrixGenerator");
             builder.setBolt("resultWriter",new ResultWriter(),bolt2Num)
                     .shuffleGrouping("matrixMultiply");
             builder.setTopologyKernelFile("matrix_mult");
