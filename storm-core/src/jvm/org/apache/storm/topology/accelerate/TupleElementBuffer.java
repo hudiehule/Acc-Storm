@@ -226,6 +226,7 @@ class TupleElementBuffer{
                 }else{
                     values.add(bytes[index]);
                 }
+                break;
             }
             case SHORT: {
                 if(isArray){
@@ -237,6 +238,7 @@ class TupleElementBuffer{
                 }else{
                     values.add(shorts[index]);
                 }
+                break;
             }
             case INT: {
                 if(isArray){
@@ -248,6 +250,7 @@ class TupleElementBuffer{
                 }else{
                     values.add(ints[index]);
                 }
+                break;
             }
             case LONG: {
                 if(isArray){
@@ -259,6 +262,7 @@ class TupleElementBuffer{
                 }else{
                     values.add(longs[index]);
                 }
+                break;
             }
             case FLOAT: {
                 if(isArray){
@@ -270,6 +274,7 @@ class TupleElementBuffer{
                 }else{
                     values.add(floats[index]);
                 }
+                break;
             }
             case DOUBLE: {
                 if(isArray){
@@ -281,7 +286,7 @@ class TupleElementBuffer{
                 }else{
                     values.add(doubles[index]);
                 }
-
+                break;
             }
             case BOOLEAN: {
                 if(isArray){
@@ -293,6 +298,7 @@ class TupleElementBuffer{
                 }else{
                     values.add(booleans[index]);
                 }
+                break;
             }
             case CHAR: {
                 if(isArray){
@@ -304,7 +310,7 @@ class TupleElementBuffer{
                 }else{
                     values.add(chars[index]);
                 }
-
+                break;
             }
             case STRING: {
                 if(isArray){
@@ -316,6 +322,7 @@ class TupleElementBuffer{
                 }else{
                     values.add(strings[index]);
                 }
+                break;
             }
         }
     }
