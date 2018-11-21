@@ -58,11 +58,12 @@ public class TupleBuffers {
         for(int i = 0;i < batchSize;i++){
             values[i] = new Values();
             for(int j = 0; j < buffers.length;j++){
-                if(isArrays[j]){
+                /*if(isArrays[j]){
                     values[i].add(buffers[j].getArray(i));
                 }else{
                     values[i].add(buffers[j].get(i));
-                }
+                }*/
+                buffers[j].putDataIntoValues(values[i],i);
             }
         }
         return values;

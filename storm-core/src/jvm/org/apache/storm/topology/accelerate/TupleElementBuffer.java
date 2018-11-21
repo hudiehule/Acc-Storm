@@ -1,5 +1,6 @@
 package org.apache.storm.topology.accelerate;
 
+import org.apache.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -211,99 +212,112 @@ class TupleElementBuffer{
         }
     }
 
-    Object get(int index){
-        switch (dataType){
-            case BYTE: {
-                return bytes[index];
-            }
-            case SHORT: {
-                return shorts[index];
-            }
-            case INT: {
-                return ints[index];
-            }
-            case LONG: {
-                return longs[index];
-            }
-            case FLOAT: {
-                return floats[index];
-            }
-            case DOUBLE: {
-                return doubles[index];
-            }
-            case BOOLEAN: {
-                return booleans[index];
-            }
-            case CHAR: {
-                return chars[index];
-            }
-            case STRING: {
-                return strings[index];
-            }
-        }
-        return null;
-    }
-    Object[] getArray(int index){
-        Object[] data = new Object[arraySize];
+    public void putDataIntoValues(Values values,int index){
         int start = index * arraySize;
         int end = start + arraySize;
         switch (dataType){
             case BYTE: {
-                for(int i = start,j = 0; i < end; i++,j++){
-                    data[j] = bytes[i];
+                if(isArray){
+                    byte[] data = new byte[arraySize];
+                    for(int i = start,j = 0; i < end; i++,j++){
+                        data[j] = bytes[i];
+                    }
+                    values.add(data);
+                }else{
+                    values.add(bytes[index]);
                 }
-                return data;
             }
             case SHORT: {
-                for(int i = start,j = 0; i < end; i++,j++){
-                    data[j] = shorts[i];
+                if(isArray){
+                    short[] data = new short[arraySize];
+                    for(int i = start,j = 0; i < end; i++,j++){
+                        data[j] = shorts[i];
+                    }
+                    values.add(data);
+                }else{
+                    values.add(shorts[index]);
                 }
-                return data;
             }
             case INT: {
-                for(int i = start,j = 0; i < end; i++,j++){
-                    data[j] = ints[i];
+                if(isArray){
+                    int[] data = new int[arraySize];
+                    for(int i = start,j = 0; i < end; i++,j++){
+                        data[j] = ints[i];
+                    }
+                    values.add(data);
+                }else{
+                    values.add(ints[index]);
                 }
-                return data;
             }
             case LONG: {
-                for(int i = start,j = 0; i < end; i++,j++){
-                    data[j] = longs[i];
+                if(isArray){
+                    long[] data = new long[arraySize];
+                    for(int i = start,j = 0; i < end; i++,j++){
+                        data[j] = longs[i];
+                    }
+                    values.add(data);
+                }else{
+                    values.add(longs[index]);
                 }
-                return data;
             }
             case FLOAT: {
-                for(int i = start,j = 0; i < end; i++,j++){
-                    data[j] = floats[i];
+                if(isArray){
+                    float[] data = new float[arraySize];
+                    for(int i = start,j = 0; i < end; i++,j++){
+                        data[j] = floats[i];
+                    }
+                    values.add(data);
+                }else{
+                    values.add(floats[index]);
                 }
-                return data;
             }
             case DOUBLE: {
-                for(int i = start,j = 0; i < end; i++,j++){
-                    data[j] = doubles[i];
+                if(isArray){
+                    double[] data = new double[arraySize];
+                    for(int i = start,j = 0; i < end; i++,j++){
+                        data[j] = doubles[i];
+                    }
+                    values.add(data);
+                }else{
+                    values.add(doubles[index]);
                 }
-                return data;
+
             }
             case BOOLEAN: {
-                for(int i = start,j = 0; i < end; i++,j++){
-                    data[j] = booleans[i];
+                if(isArray){
+                    boolean[] data = new boolean[arraySize];
+                    for(int i = start,j = 0; i < end; i++,j++){
+                        data[j] = booleans[i];
+                    }
+                    values.add(data);
+                }else{
+                    values.add(booleans[index]);
                 }
-                return data;
             }
             case CHAR: {
-                for(int i = start,j = 0; i < end; i++,j++){
-                    data[j] = chars[i];
+                if(isArray){
+                    char[] data = new char[arraySize];
+                    for(int i = start,j = 0; i < end; i++,j++){
+                        data[j] = chars[i];
+                    }
+                    values.add(data);
+                }else{
+                    values.add(chars[index]);
                 }
-                return data;
+
             }
             case STRING: {
-                for(int i = start,j = 0; i < end; i++,j++){
-                    data[j] = strings[i];
+                if(isArray){
+                    String[] data = new String[arraySize];
+                    for(int i = start,j = 0; i < end; i++,j++){
+                        data[j] = strings[i];
+                    }
+                    values.add(data);
+                }else{
+                    values.add(strings[index]);
                 }
-                return data;
             }
         }
-        return data;
     }
 
     public byte[] getByteBuffer() {
