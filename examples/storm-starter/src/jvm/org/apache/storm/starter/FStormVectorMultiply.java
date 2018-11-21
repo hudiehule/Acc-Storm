@@ -85,8 +85,8 @@ public class FStormVectorMultiply {
 
     public static class VectorInnerProduct extends BaseRichAccBolt {
         private static final Logger LOG = LoggerFactory.getLogger(VectorInnerProduct.class);
-        public VectorInnerProduct(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, ConstantParameter[] constants, int batchSize, String kernelName){
-            super(inputTupleEleTypes,outputTupleEleTypes,constants,batchSize,kernelName);
+        public VectorInnerProduct(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, ConstantParameter[] constants, int batchSize, String kernelName, int tupleParallelism){
+            super(inputTupleEleTypes,outputTupleEleTypes,constants,batchSize,kernelName,tupleParallelism);
         }
         public List<Object> getInputTupleValues(Tuple tuple){
             return tuple.getValues();
@@ -220,7 +220,7 @@ public class FStormVectorMultiply {
                     // output data type
                     new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT)},
                     new ConstantParameter[]{new ConstantParameter(DataType.INT,500)},
-                    100,"vector_mult"),bolt1Num).shuffleGrouping("vectorGenerator");
+                    100,"vectorMult",vectorSize),bolt1Num).shuffleGrouping("vectorGenerator");
             builder.setBolt("resultWriter",new ResultWriter(),bolt2Num).shuffleGrouping("vectorInnerProduct");
             builder.setTopologyKernelFile("vector_mult");
             conf.setNumWorkers(numWorkers);

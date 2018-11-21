@@ -83,8 +83,8 @@ public class FStormMatrixMultiply {
     }
 
     public static class MatrixMultiply extends BaseRichAccBolt{
-        public MatrixMultiply(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, ConstantParameter[] constantParameters,int batchSize, String kernelName){
-            super(inputTupleEleTypes,outputTupleEleTypes,constantParameters,batchSize,kernelName);
+        public MatrixMultiply(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, ConstantParameter[] constantParameters,int batchSize, String kernelName, int tupleParallelism){
+            super(inputTupleEleTypes,outputTupleEleTypes,constantParameters,batchSize,kernelName,tupleParallelism);
         }
         public List<Object> getInputTupleValues(Tuple tuple){
            return tuple.getValues();
@@ -230,7 +230,7 @@ public class FStormMatrixMultiply {
                     // output data type
                     new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,matrixSize)},
                     new ConstantParameter[]{new ConstantParameter(DataType.INT,matrixN)},
-                    1000,"matrixMult"),bolt1Num).shuffleGrouping("matrixGenerator");
+                    1000,"matrixMult",matrixSize),bolt1Num).shuffleGrouping("matrixGenerator");
             builder.setBolt("resultWriter",new ResultWriter(),bolt2Num)
                     .shuffleGrouping("matrixMultiply");
             builder.setTopologyKernelFile("matrix_mult");
