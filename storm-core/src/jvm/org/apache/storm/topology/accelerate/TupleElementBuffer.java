@@ -247,60 +247,58 @@ class TupleElementBuffer{
         Object[] data = new Object[arraySize];
         int start = index * arraySize;
         int end = start + arraySize;
-        LOG.info("startIndex = " + start + " ,endIndex = " + end);
         switch (dataType){
             case BYTE: {
-                for(int i = start; i < end; i++){
-                    data[i] = bytes[i];
+                for(int i = start,j = 0; i < end; i++,j++){
+                    data[j] = bytes[i];
                 }
                 return data;
             }
             case SHORT: {
-                for(int i = start; i < end; i++){
-                    data[i] = shorts[i];
+                for(int i = start,j = 0; i < end; i++,j++){
+                    data[j] = shorts[i];
                 }
                 return data;
             }
             case INT: {
-                for(int i = start; i < end; i++){
-                    data[i] = ints[i];
+                for(int i = start,j = 0; i < end; i++,j++){
+                    data[j] = ints[i];
                 }
                 return data;
             }
             case LONG: {
-                for(int i = start; i < end; i++){
-                    data[i] = longs[i];
+                for(int i = start,j = 0; i < end; i++,j++){
+                    data[j] = longs[i];
                 }
                 return data;
             }
             case FLOAT: {
-                LOG.info("float buffer size = " + floats.length);
-                for(int i = start; i < end; i++){
-                    data[i] = floats[i];
+                for(int i = start,j = 0; i < end; i++,j++){
+                    data[j] = floats[i];
                 }
                 return data;
             }
             case DOUBLE: {
-                for(int i = start; i < end; i++){
-                    data[i] = doubles[i];
+                for(int i = start,j = 0; i < end; i++,j++){
+                    data[j] = doubles[i];
                 }
                 return data;
             }
             case BOOLEAN: {
-                for(int i = start; i < end; i++){
-                    data[i] = booleans[i];
+                for(int i = start,j = 0; i < end; i++,j++){
+                    data[j] = booleans[i];
                 }
                 return data;
             }
             case CHAR: {
-                for(int i = start; i < end; i++){
-                    data[i] = chars[i];
+                for(int i = start,j = 0; i < end; i++,j++){
+                    data[j] = chars[i];
                 }
                 return data;
             }
             case STRING: {
-                for(int i = start; i < end; i++){
-                    data[i] = strings[i];
+                for(int i = start,j = 0; i < end; i++,j++){
+                    data[j] = strings[i];
                 }
                 return data;
             }
