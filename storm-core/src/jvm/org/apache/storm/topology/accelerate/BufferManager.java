@@ -72,6 +72,7 @@ public class BufferManager {
     public void putInputTuplesDirectlyToShmAndStartKernel(List<Object> values){
         inputBuffer.putTupleValues(values);
         nativeBufferManager.pushInputTuplesFromBufferToShmAndStartKernel(inputBuffer.bufferSizes,inputBuffer);
+        inputBuffer.resetBuffers();
     }
 
     public Values constructOneOutputData(){
