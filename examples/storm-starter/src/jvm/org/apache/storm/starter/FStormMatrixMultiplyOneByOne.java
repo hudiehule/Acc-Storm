@@ -235,7 +235,8 @@ public class FStormMatrixMultiplyOneByOne {
                             new TupleInnerDataType(DataType.FLOAT,true,matrixSize)},
                     // output data type
                     new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,matrixSize)},
-                    new ConstantParameter[]{new ConstantParameter(DataType.INT,matrixN)},
+                    new ConstantParameter[]{new ConstantParameter(DataType.INT,matrixN),
+                    new ConstantParameter(DataType.INT,matrixN)},
                     batchSize,"matrixMult",matrixSize),bolt1Num).shuffleGrouping("matrixGenerator");
             builder.setBolt("resultWriter",new ResultWriter(),bolt2Num)
                     .shuffleGrouping("matrixMultiply");
