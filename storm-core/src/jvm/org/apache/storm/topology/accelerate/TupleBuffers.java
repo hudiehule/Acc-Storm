@@ -1,9 +1,6 @@
 package org.apache.storm.topology.accelerate;
 
 import org.apache.storm.tuple.Values;
-import sun.swing.BakedArrayList;
-
-import java.util.ArrayList;
 import java.util.List;
 
 /**

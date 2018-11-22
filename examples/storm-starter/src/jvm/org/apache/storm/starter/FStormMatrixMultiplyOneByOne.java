@@ -12,10 +12,7 @@ import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.TopologyBuilder;
-import org.apache.storm.topology.accelerate.BaseRichAccBolt;
-import org.apache.storm.topology.accelerate.ConstantParameter;
-import org.apache.storm.topology.accelerate.DataType;
-import org.apache.storm.topology.accelerate.TupleInnerDataType;
+import org.apache.storm.topology.accelerate.*;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.topology.base.BaseRichSpout;
 import org.apache.storm.tuple.Fields;
@@ -87,9 +84,9 @@ public class FStormMatrixMultiplyOneByOne {
         }
     }
 
-    public static class MatrixMultiply extends BaseRichAccBolt {
-        public MatrixMultiply(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, ConstantParameter[] constantParameters, int batchSize, String kernelName, int tupleParallelism){
-            super(inputTupleEleTypes,outputTupleEleTypes,constantParameters,batchSize,kernelName,tupleParallelism);
+    public static class MatrixMultiply extends BaseRichAccOneBolt {
+        public MatrixMultiply(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, ConstantParameter[] constantParameters,String kernelName, int tupleParallelism){
+            super(inputTupleEleTypes,outputTupleEleTypes,constantParameters,kernelName,tupleParallelism);
         }
         public List<Object> getInputTupleValues(Tuple tuple){
             return tuple.getValues();
@@ -229,7 +226,7 @@ public class FStormMatrixMultiplyOneByOne {
             TopologyBuilder builder = new TopologyBuilder();
             int matrixSize = matrixN * matrixN;
             builder.setSpout("matrixGenerator",new MatrixGenerator(ratePerSecond,matrixN),spoutNum);
-            builder.setAccBolt("matrixMultiply",new MatrixMultiply(
+            builder.setAccOneBolt("matrixMultiply",new MatrixMultiply(
                     // input data type
                     new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,matrixSize),
                             new TupleInnerDataType(DataType.FLOAT,true,matrixSize)},
@@ -237,7 +234,7 @@ public class FStormMatrixMultiplyOneByOne {
                     new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,matrixSize)},
                     new ConstantParameter[]{new ConstantParameter(DataType.INT,matrixN),
                     new ConstantParameter(DataType.INT,matrixN)},
-                    batchSize,"matrixMult",matrixSize),bolt1Num).shuffleGrouping("matrixGenerator");
+                    "matrixMult",matrixSize),bolt1Num).shuffleGrouping("matrixGenerator");
             builder.setBolt("resultWriter",new ResultWriter(),bolt2Num)
                     .shuffleGrouping("matrixMultiply");
             builder.setTopologyKernelFile("matrix_mult_hudie");

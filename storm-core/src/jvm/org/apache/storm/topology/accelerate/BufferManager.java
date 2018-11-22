@@ -1,6 +1,5 @@
 package org.apache.storm.topology.accelerate;
 
-import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import java.util.List;
 
@@ -70,4 +69,13 @@ public class BufferManager {
         return outputBuffer.constructTupleValues();
     }
 
+    public void putInputTuplesDirectlyToShmAndStartKernel(List<Object> values){
+        inputBuffer.putTupleValues(values);
+        nativeBufferManager.pushInputTuplesFromBufferToShmAndStartKernel(inputBuffer.bufferSizes,inputBuffer);
+    }
+
+    public Values constructOneOutputData(){
+        Values[] elements = constructOutputData();
+        return elements[0];
+    }
 }

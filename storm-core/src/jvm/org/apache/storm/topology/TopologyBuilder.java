@@ -27,6 +27,7 @@ import org.apache.storm.state.State;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.accelerate.BaseRichAccBolt;
+import org.apache.storm.topology.accelerate.BaseRichAccOneBolt;
 import org.apache.storm.topology.accelerate.IAccBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
@@ -252,6 +253,15 @@ public class TopologyBuilder {
         return setAccGeneralBolt(id,new AccBoltExecutor(bolt),1);
     }
 
+    public BoltDeclarer setAccOneBolt(String id, BaseRichAccOneBolt bolt, Number parallelism_hint) throws IllegalArgumentException {
+        _accBolts.put(id,bolt);
+        return setAccGeneralBolt(id,new AccBoltExecutor(bolt),parallelism_hint);
+    }
+
+    public BoltDeclarer setAccOneBolt(String id, BaseRichAccOneBolt bolt) throws IllegalArgumentException {
+        _accBolts.put(id,bolt);
+        return setAccGeneralBolt(id,new AccBoltExecutor(bolt),1);
+    }
     /**
      * Set the kernel file as a String
      * @param file a kernel string or kernel file path
