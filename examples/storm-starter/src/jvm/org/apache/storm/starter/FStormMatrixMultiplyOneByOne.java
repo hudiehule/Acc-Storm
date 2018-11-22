@@ -61,6 +61,10 @@ public class FStormMatrixMultiplyOneByOne {
             _emitsLeft = _emitAmount;
             matrixA = new float[matrixSize];
             matrixB = new float[matrixSize];
+            for(int i = 0; i < matrixSize;i++){
+                matrixA[i] = _rand.nextFloat();
+                matrixB[i] = _rand.nextFloat();
+            }
         }
         @Override
         public void nextTuple(){
@@ -70,10 +74,6 @@ public class FStormMatrixMultiplyOneByOne {
             }
 
             if (_emitsLeft > 0) {
-                for(int i = 0; i < matrixSize;i++){
-                    matrixA[i] = _rand.nextFloat();
-                    matrixB[i] = _rand.nextFloat();
-                }
                 _collector.emit(new Values(matrixA,matrixB),_rand.nextInt());
                 _emitsLeft--;
             }
