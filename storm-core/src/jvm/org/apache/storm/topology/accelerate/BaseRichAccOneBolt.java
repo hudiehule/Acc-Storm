@@ -130,8 +130,20 @@ public abstract class BaseRichAccOneBolt extends BaseComponent implements IRichA
     public void accExecute(Tuple input){
         long receiveTime = System.nanoTime();
         bufferManager.putInputTuplesDirectlyToShmAndStartKernel(getInputTupleValues(input));
-        singleThreadPool.submit(new GettingResultsTask(this.accCollector,input,receiveTime));
+        try{
+            bufferManager.waitAndPollOutputTupleEleFromShm();
+            Values values = bufferManager.constructOneOutputData();
+            accCollector.emit(input, values);
+            accCollector.ack(input);
+            LOG.info("tuple processing time :" + (System.nanoTime() - receiveTime));
+        }catch (Exception e){
+            LOG.info("exception occur :" + e.toString());
+            e.printStackTrace();
+        }
+        //singleThreadPool.submit(new GettingResultsTask(this.accCollector,input,receiveTime));
     }
+
+
 
 }
 
