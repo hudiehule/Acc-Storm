@@ -282,7 +282,7 @@ public class FStormTestTopology {
 
             Thread.sleep(1000 * 30);
             //Sleep for 10 mins
-            for (int i = 0; i < 20; i++) {
+            for (int i = 0; i < 30; i++) {
                 Thread.sleep(30 * 1000);
                 printMetrics(client, name);
             }

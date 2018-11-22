@@ -33,7 +33,6 @@ class TupleElementBuffer{
         this.arraySize =arraySize;
         this.N = 0;
         this.bufferSize = batchSize * arraySize;
-        LOG.info("create a buffer , the size = " + bufferSize);
         switch(type){
             case BYTE: {
                 bytes = new byte[bufferSize];

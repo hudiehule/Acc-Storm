@@ -249,7 +249,7 @@ public class FStormMatrixMultiply {
             Nimbus.Client client = NimbusClient.getConfiguredClient(clusterConf).getClient();
 
             Thread.sleep(1000 * 30);
-            for (int i = 0; i < 20; i++) {
+            for (int i = 0; i < 30; i++) {
                 Thread.sleep(30 * 1000);
                 printMetrics(client, name);
             }

@@ -119,7 +119,6 @@ public class NativeBufferManager {
             waitOutputDataReady(shmFlagid);
             long wetime = System.nanoTime();
             outputBuffers.resetBuffers();
-            LOG.info("start poll data form native machine");
             for(int i = 0; i <outputBuffers.bufferTypes.length;i++){
                 int size = sizes[i];
                 switch(outputBuffers.bufferTypes[i]){
