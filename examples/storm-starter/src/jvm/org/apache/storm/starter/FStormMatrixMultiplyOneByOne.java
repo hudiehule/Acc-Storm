@@ -242,7 +242,7 @@ public class FStormMatrixMultiplyOneByOne {
             conf.setNumAckers(numAckers);
             conf.setDebug(isDebug);
 
-            String name = "MatrixMultiplyOnStorm"; //拓扑名称
+            String name = "FStormMatrixMultiplyOneByOne"; //拓扑名称
 
             StormSubmitter.submitTopologyWithProgressBar(name, conf, builder.createTopology());
 

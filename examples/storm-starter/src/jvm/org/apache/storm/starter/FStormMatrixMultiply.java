@@ -239,7 +239,7 @@ public class FStormMatrixMultiply {
             conf.setNumAckers(numAckers);
             conf.setDebug(isDebug);
 
-            String name = "MatrixMultiplyOnStorm"; //拓扑名称
+            String name = "FStormMatrixMultiply"; //拓扑名称
 
             StormSubmitter.submitTopologyWithProgressBar(name, conf, builder.createTopology());
 

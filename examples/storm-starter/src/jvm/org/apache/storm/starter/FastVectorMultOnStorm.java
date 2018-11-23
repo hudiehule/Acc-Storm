@@ -21,55 +21,35 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-/**
- * Created by Administrator on 2018/10/26.
- */
-public class VectorMultOnStorm {
 
-    public static class VectorGenerator extends BaseRichSpout{
+/**
+ * Created by Administrator on 2018/11/23.
+ */
+public class FastVectorMultOnStorm {
+    public static class VectorGenerator extends BaseRichSpout {
         SpoutOutputCollector _collector;
         float[] vectorA;
         float[] vectorB;
-        long _periodNano;
-        long _emitAmount;
         Random _rand;
-        long _nextEmitTime;
-        long _emitsLeft;
         int vectorSize;
-        public VectorGenerator(long ratePerSecond, int vectorSize){
-            if (ratePerSecond > 0) {
-                _periodNano = Math.max(1, 1000000000/ratePerSecond);
-                _emitAmount = Math.max(1, (long)((ratePerSecond / 1000000000.0) * _periodNano));
-            } else {
-                _periodNano = Long.MAX_VALUE - 1;
-                _emitAmount = 1;
-            }
+        public VectorGenerator(int vectorSize){
             this.vectorSize = vectorSize;
         }
         @Override
         public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
             this._collector = collector;
             this._rand = ThreadLocalRandom.current();
-            _nextEmitTime = System.nanoTime();
-            _emitsLeft = _emitAmount;
             vectorA = new float[vectorSize];
             vectorB = new float[vectorSize];
-            for(int i = 0; i < vectorSize;i++){
+            for(int i = 0; i < vectorSize;i++) {
                 vectorA[i] = _rand.nextFloat();
                 vectorB[i] = _rand.nextFloat();
             }
         }
         @Override
         public void nextTuple(){
-            if (_emitsLeft <= 0 && _nextEmitTime <= System.nanoTime()) {
-                _emitsLeft = _emitAmount;
-                _nextEmitTime = _nextEmitTime + _periodNano;
-            }
+            _collector.emit(new Values(vectorA,vectorB),_rand.nextInt());
 
-            if (_emitsLeft > 0) {
-                _collector.emit(new Values(vectorA,vectorB),_rand.nextInt());
-                _emitsLeft--;
-            }
         }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
@@ -83,7 +63,7 @@ public class VectorMultOnStorm {
             _collector = collector;
         }
         public void declareOutputFields(OutputFieldsDeclarer declarer){
-             declarer.declare(new Fields("InnerProduct"));
+            declarer.declare(new Fields("InnerProduct"));
         }
         public void execute(Tuple tuple){
             float[] vectorA = (float[])tuple.getValue(0);
@@ -104,48 +84,17 @@ public class VectorMultOnStorm {
     public static class ResultWriter extends BaseRichBolt{
         private static final Logger LOG = LoggerFactory.getLogger(ResultWriter.class);
         OutputCollector _collector;
-       /* String filePath;
-        FileOutputStream fos = null;
-        DataOutputStream dos = null;
-        public ResultWriter(String filePath){
-            this.filePath = filePath;
-        }*/
         public void prepare(Map conf,TopologyContext context,OutputCollector collector){
             _collector = collector;
-           /* try{
-                File file = new File(filePath);
-                if(!file.exists()){
-                    file.createNewFile();
-                }
-                fos = new FileOutputStream(file);
-                dos = new DataOutputStream(fos);
-            }catch (Exception e){
-                e.printStackTrace();
-            }*/
         }
         public void declareOutputFields(OutputFieldsDeclarer declarer){
         }
         public void execute(Tuple tuple){
             float vectorInnerProduct = tuple.getFloat(0);
-            /*try{
-                for(int i = 0; i < vectorC.length;i++){
-                    dos.writeFloat(vectorC[i]);
-                    dos.writeChar(32); // 空格
-                }
-                dos.writeChar(13); // 换行
-            }catch (Exception e){
-                e.printStackTrace();
-            }*/
             LOG.info("InnerProduct: " + vectorInnerProduct);
             _collector.ack(tuple);
         }
         public void cleanup(){
-            /*try{
-                dos.close();
-                fos.close();
-            }catch (Exception e){
-                e.printStackTrace();
-            }*/
         }
     }
 
@@ -206,8 +155,8 @@ public class VectorMultOnStorm {
     }
 
     public static void main(String[] args) throws Exception{
-        if(args == null ||args.length <8){
-            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond vectorSize isDebug");
+        if(args == null ||args.length <7){
+            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers vectorSize isDebug");
         }else{
             int spoutNum = Integer.valueOf(args[0]);
             int bolt1Num = Integer.valueOf(args[1]);
@@ -216,17 +165,16 @@ public class VectorMultOnStorm {
             int numAckers = Integer.valueOf(args[3]);
             int numWorkers = Integer.valueOf(args[4]);
 
-            int ratePerSecond = Integer.valueOf(args[5]);
-            int vectorSize = Integer.valueOf(args[6]);
-        //    String filePath = args[7];
-            boolean isDebug = Boolean.valueOf(args[7]);
+            int vectorSize = Integer.valueOf(args[5]);
+            //    String filePath = args[7];
+            boolean isDebug = Boolean.valueOf(args[6]);
 
             Config conf = new Config();
 
             TopologyBuilder builder = new TopologyBuilder();
 
 
-            builder.setSpout("vectorGenerator",new VectorGenerator(ratePerSecond,vectorSize),spoutNum);
+            builder.setSpout("vectorGenerator",new VectorGenerator(vectorSize),spoutNum);
             builder.setBolt("vectorInnerProduct",new VectorInnerProduct(),bolt1Num).shuffleGrouping("vectorGenerator");
             builder.setBolt("resultWriter",new ResultWriter(),bolt2Num).shuffleGrouping("vectorInnerProduct");
 
@@ -234,7 +182,7 @@ public class VectorMultOnStorm {
             conf.setNumAckers(numAckers);
             conf.setDebug(isDebug);
 
-            String name = "VectorMultiplyOnStorm"; //拓扑名称
+            String name = "FastVectorMultiplyOnStorm"; //拓扑名称
 
             StormSubmitter.submitTopologyWithProgressBar(name, conf, builder.createTopology());
 
