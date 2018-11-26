@@ -216,8 +216,8 @@ public class FStormVectorMultiply {
             builder.setSpout("vectorGenerator",new VectorGenerator(ratePerSecond,vectorSize),spoutNum);
             builder.setAccBolt("vectorInnerProduct",new VectorInnerProduct(
                     // input data type
-                    new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,100),
-                            new TupleInnerDataType(DataType.FLOAT,true,100)},
+                    new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,vectorSize),
+                            new TupleInnerDataType(DataType.FLOAT,true,vectorSize)},
                     // output data type
                     new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT)},
                     new ConstantParameter[]{new ConstantParameter(DataType.INT,500)},
