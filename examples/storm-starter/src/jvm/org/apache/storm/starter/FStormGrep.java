@@ -23,6 +23,7 @@ import org.apache.storm.tuple.Values;
 import org.apache.storm.utils.NimbusClient;
 import org.apache.storm.utils.Utils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -104,7 +105,7 @@ public class FStormGrep {
         @Override
         public void execute(Tuple input) {
             for (String word : input.getString(0).split("\\s+")) {
-                _collector.emit(input, new Values(word));
+                _collector.emit(input, new Values(word.toCharArray()));
             }
             _collector.ack(input);
         }
@@ -141,9 +142,9 @@ public class FStormGrep {
 
         @Override
         public void execute(Tuple input) {
-            String sentence = input.getString(0);
-            LOG.debug(String.format("find pattern %s in word %s", ptnString, sentence));
-            matcher = pattern.matcher(sentence);
+            String word = new String((char[])input.getValue(0));
+            LOG.debug(String.format("find pattern %s in word %s", ptnString, word));
+            matcher = pattern.matcher(word);
             if (matcher.find()) {
                 _collector.emit(input, new Values(1));
             } else {
@@ -282,7 +283,7 @@ public class FStormGrep {
             clusterConf.putAll(Utils.readCommandLineOpts());
             Nimbus.Client client = NimbusClient.getConfiguredClient(clusterConf).getClient();
 
-            Thread.sleep(1000 * 30);
+            Thread.sleep(1000 * 60);
             for (int i = 0; i < 30; i++) {
                 Thread.sleep(30 * 1000);
                 printMetrics(client, name);

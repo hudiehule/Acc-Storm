@@ -192,8 +192,11 @@ class TupleElementBuffer{
     private void putChar(Object value){
         if(isArray){
             char[] data = (char[])value;
-            for(int i = 0; i< arraySize;i++){
+            for(int i = 0; i< data.length;i++){
                 chars[N++] = data[i];
+            }
+            for(int i = data.length; i< arraySize;i++){
+                chars[N++] = '\0';
             }
         }else{
             chars[N++] = (char)value;

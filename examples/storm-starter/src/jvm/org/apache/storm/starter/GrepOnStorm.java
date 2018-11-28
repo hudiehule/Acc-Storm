@@ -95,7 +95,7 @@ public class GrepOnStorm {
         @Override
         public void execute(Tuple input, BasicOutputCollector collector) {
             for (String word : input.getString(0).split("\\s+")) {
-                collector.emit(new Values(word));
+                collector.emit(new Values(word.toCharArray()));
             }
         }
 
@@ -122,7 +122,7 @@ public class GrepOnStorm {
 
         @Override
         public void execute(Tuple input, BasicOutputCollector collector) {
-            String sentence = input.getString(0);
+            String sentence = new String((char[])input.getValue(0));
             LOG.debug(String.format("find pattern %s in sentence %s", ptnString, sentence));
             matcher = pattern.matcher(sentence);
             if (matcher.find()) {
@@ -249,7 +249,7 @@ public class GrepOnStorm {
             clusterConf.putAll(Utils.readCommandLineOpts());
             Nimbus.Client client = NimbusClient.getConfiguredClient(clusterConf).getClient();
 
-            Thread.sleep(1000 * 30);
+            Thread.sleep(1000 * 60);
             for (int i = 0; i < 30; i++) {
                 Thread.sleep(30 * 1000);
                 printMetrics(client, name);
