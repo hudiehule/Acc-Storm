@@ -205,8 +205,8 @@ public class FStormMatrixMultiplyOneByOne {
     }
 
     public static void main(String[] args) throws Exception{
-        if(args == null ||args.length <9){
-            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond matrixN batchSize isDebug");
+        if(args == null ||args.length < 9){
+            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond matrixN isDebug cl_file_name");
         }else{
             int spoutNum = Integer.valueOf(args[0]);
             int bolt1Num = Integer.valueOf(args[1]);
@@ -218,9 +218,9 @@ public class FStormMatrixMultiplyOneByOne {
             int ratePerSecond = Integer.valueOf(args[5]);
             int matrixN = Integer.valueOf(args[6]);
             //    String filePath = args[7];
-            int batchSize = Integer.valueOf(args[7]);
-            boolean isDebug = Boolean.valueOf(args[8]);
 
+            boolean isDebug = Boolean.valueOf(args[7]);
+            String kernel_file_name = args[8];
             Config conf = new Config();
 
             TopologyBuilder builder = new TopologyBuilder();
@@ -237,7 +237,7 @@ public class FStormMatrixMultiplyOneByOne {
                     "matrixMult",matrixSize),bolt1Num).shuffleGrouping("matrixGenerator");
             builder.setBolt("resultWriter",new ResultWriter(),bolt2Num)
                     .shuffleGrouping("matrixMultiply");
-            builder.setTopologyKernelFile("matrix_mult_hudie");
+            builder.setTopologyKernelFile(kernel_file_name);
             conf.setNumWorkers(numWorkers);
             conf.setNumAckers(numAckers);
             conf.setDebug(isDebug);
