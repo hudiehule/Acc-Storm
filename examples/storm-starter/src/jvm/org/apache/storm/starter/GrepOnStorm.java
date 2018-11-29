@@ -4,6 +4,9 @@ import org.apache.log4j.Logger;
 import org.apache.storm.Config;
 import org.apache.storm.StormSubmitter;
 import org.apache.storm.generated.*;
+import org.apache.storm.kafka.KafkaSpout;
+import org.apache.storm.kafka.SpoutConfig;
+import org.apache.storm.kafka.ZkHosts;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.BasicOutputCollector;
@@ -19,6 +22,7 @@ import org.apache.storm.utils.Utils;
 
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -213,8 +217,8 @@ public class GrepOnStorm {
 
 
     public static void main(String[] args) throws Exception{
-        if(args == null ||args.length < 9){
-            System.out.println("Please input paras: spoutNum splitNum matchNum countNum numAckers numWorkers ratePerSecond isDebug matchStr");
+        if(args == null ||args.length < 10){
+            System.out.println("Please input paras: spoutNum splitNum matchNum countNum numAckers numWorkers ratePerSecond isDebug matchStr isKafka");
         }else {
             int spoutNum = Integer.valueOf(args[0]);
             int splitNum = Integer.valueOf(args[1]);
@@ -228,10 +232,18 @@ public class GrepOnStorm {
             boolean isDebug = Boolean.valueOf(args[7]);
 
             String patterStr = args[8];
+            boolean isKafkaSpout = Boolean.valueOf(args[9]);
             Config conf = new Config();
 
             TopologyBuilder builder = new TopologyBuilder();
-            builder.setSpout(SPOUT_ID,new SentenceGeneratorSpout(ratePerSecond),spoutNum);
+            if(isKafkaSpout){
+                SpoutConfig spoutConfig = new SpoutConfig(new ZkHosts("xeon+fpga:2181,xeon+fpga:2182,dell:2181"),
+                        "datasource",null, UUID.randomUUID().toString());
+                KafkaSpout kafkaSpout = new KafkaSpout(spoutConfig);
+                builder.setSpout(SPOUT_ID,kafkaSpout,spoutNum);
+            }else{
+                builder.setSpout(SPOUT_ID,new SentenceGeneratorSpout(ratePerSecond),spoutNum);
+            }
             builder.setBolt(SPLIT_ID, new SplitSentence(),splitNum).shuffleGrouping(SPOUT_ID);
             builder.setBolt(FM_ID, new FindMatchingWord(patterStr),matchNum).shuffleGrouping(SPLIT_ID);
             builder.setBolt(CM_ID, new CountMatchingWord(),countNum).fieldsGrouping(FM_ID, new Fields(FindMatchingWord.FIELDS));
