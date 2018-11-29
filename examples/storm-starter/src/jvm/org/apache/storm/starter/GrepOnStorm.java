@@ -6,7 +6,9 @@ import org.apache.storm.StormSubmitter;
 import org.apache.storm.generated.*;
 import org.apache.storm.kafka.KafkaSpout;
 import org.apache.storm.kafka.SpoutConfig;
+import org.apache.storm.kafka.StringScheme;
 import org.apache.storm.kafka.ZkHosts;
+import org.apache.storm.spout.SchemeAsMultiScheme;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.BasicOutputCollector;
@@ -98,7 +100,8 @@ public class GrepOnStorm {
 
         @Override
         public void execute(Tuple input, BasicOutputCollector collector) {
-            for (String word : input.getString(0).split("\\s+")) {
+            String sentence = input.getStringByField("str");
+            for (String word : sentence.split("\\s+")) {
                 collector.emit(new Values(word.toCharArray()));
             }
         }
@@ -239,6 +242,7 @@ public class GrepOnStorm {
             if(isKafkaSpout){
                 SpoutConfig spoutConfig = new SpoutConfig(new ZkHosts("xeon+fpga:2181,xeon+fpga:2182,dell:2181"),
                         "datasource",null, UUID.randomUUID().toString());
+                spoutConfig.scheme = new SchemeAsMultiScheme(new StringScheme());
                 KafkaSpout kafkaSpout = new KafkaSpout(spoutConfig);
                 builder.setSpout(SPOUT_ID,kafkaSpout,spoutNum);
             }else{

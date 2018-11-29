@@ -4,6 +4,11 @@ import org.apache.log4j.Logger;
 import org.apache.storm.Config;
 import org.apache.storm.StormSubmitter;
 import org.apache.storm.generated.*;
+import org.apache.storm.kafka.KafkaSpout;
+import org.apache.storm.kafka.SpoutConfig;
+import org.apache.storm.kafka.StringScheme;
+import org.apache.storm.kafka.ZkHosts;
+import org.apache.storm.spout.SchemeAsMultiScheme;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -23,10 +28,7 @@ import org.apache.storm.tuple.Values;
 import org.apache.storm.utils.NimbusClient;
 import org.apache.storm.utils.Utils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -104,8 +106,9 @@ public class FStormGrep {
 
         @Override
         public void execute(Tuple input) {
-            for (String word : input.getString(0).split("\\s+")) {
-                _collector.emit(input, new Values(word.toCharArray()));
+            String sentence = input.getStringByField("str");
+            for (String word : sentence.split("\\s+")) {
+                _collector.emit(new Values(word.toCharArray()));
             }
             _collector.ack(input);
         }
@@ -242,8 +245,8 @@ public class FStormGrep {
     public static final int wordLength = 15;
 
     public static void main(String[] args) throws Exception {
-        if (args == null || args.length < 10) {
-            System.out.println("Please input paras: spoutNum splitNum matchNum countNum numAckers numWorkers ratePerSecond batchSize isDebug matchStr");
+        if (args == null || args.length < 11) {
+            System.out.println("Please input paras: spoutNum splitNum matchNum countNum numAckers numWorkers ratePerSecond batchSize isDebug matchStr isKafkaSpout");
         } else {
             int spoutNum = Integer.valueOf(args[0]);
             int splitNum = Integer.valueOf(args[1]);
@@ -258,10 +261,19 @@ public class FStormGrep {
             boolean isDebug = Boolean.valueOf(args[8]);
 
             String patterStr = args[9];
+            boolean isKafkaSpout = Boolean.valueOf(args[10]);
             Config conf = new Config();
 
             TopologyBuilder builder = new TopologyBuilder();
-            builder.setSpout(SPOUT_ID, new SentenceGeneratorSpout(ratePerSecond), spoutNum);
+            if(isKafkaSpout){
+                SpoutConfig spoutConfig = new SpoutConfig(new ZkHosts("xeon+fpga:2181,xeon+fpga:2182,dell:2181"),
+                        "datasource",null, UUID.randomUUID().toString());
+                spoutConfig.scheme = new SchemeAsMultiScheme(new StringScheme());
+                KafkaSpout kafkaSpout = new KafkaSpout(spoutConfig);
+                builder.setSpout(SPOUT_ID,kafkaSpout,spoutNum);
+            }else{
+                builder.setSpout(SPOUT_ID,new SentenceGeneratorSpout(ratePerSecond),spoutNum);
+            }
             builder.setBolt(SPLIT_ID, new SplitSentence(), splitNum).shuffleGrouping(SPOUT_ID);
             builder.setAccBolt(FM_ID, new FindMatchingWord(new TupleInnerDataType[]{new TupleInnerDataType(DataType.CHAR, true, wordLength)},
                     new TupleInnerDataType[]{new TupleInnerDataType(DataType.INT, false, 1)},
