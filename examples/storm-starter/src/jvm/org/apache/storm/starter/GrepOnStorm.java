@@ -241,7 +241,7 @@ public class GrepOnStorm {
             TopologyBuilder builder = new TopologyBuilder();
             if(isKafkaSpout){
                 SpoutConfig spoutConfig = new SpoutConfig(new ZkHosts("xeon+fpga:2181,xeon+fpga:2182,dell:2181"),
-                        "datasource",null, UUID.randomUUID().toString());
+                        "datasource","/ostormdata", UUID.randomUUID().toString());
                 spoutConfig.scheme = new SchemeAsMultiScheme(new StringScheme());
                 KafkaSpout kafkaSpout = new KafkaSpout(spoutConfig);
                 builder.setSpout(SPOUT_ID,kafkaSpout,spoutNum);
