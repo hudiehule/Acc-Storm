@@ -90,7 +90,7 @@ public class FStormGrep {
 
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
-            declarer.declare(new Fields("sentence"));
+            declarer.declare(new Fields("str"));
         }
     }
 
