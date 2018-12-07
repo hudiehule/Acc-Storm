@@ -8,6 +8,10 @@ import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.TopologyBuilder;
+import org.apache.storm.topology.accelerate.BaseRichAccBolt;
+import org.apache.storm.topology.accelerate.ConstantParameter;
+import org.apache.storm.topology.accelerate.DataType;
+import org.apache.storm.topology.accelerate.TupleInnerDataType;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.topology.base.BaseRichSpout;
 import org.apache.storm.tuple.Fields;
@@ -18,15 +22,16 @@ import org.apache.storm.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-/**
- * Created by Administrator on 2018/10/26.
- */
-public class VectorMultOnStorm {
 
-    public static class VectorGenerator extends BaseRichSpout{
+/**
+ * Created by Administrator on 2018/12/7.
+ */
+public class FStormVectorAdd {
+    public static class VectorGenerator extends BaseRichSpout {
         SpoutOutputCollector _collector;
         float[] vectorA;
         float[] vectorB;
@@ -77,23 +82,30 @@ public class VectorMultOnStorm {
         }
     }
 
-    public static class VectorInnerProduct extends BaseRichBolt {
+    public static class VectorAdd extends BaseRichAccBolt {
+        public VectorAdd(TupleInnerDataType[] inputTupleEleTypes, TupleInnerDataType[] outputTupleEleTypes, ConstantParameter[] constants, int batchSize, String kernelName, int tupleParallelism){
+            super(inputTupleEleTypes,outputTupleEleTypes,constants,batchSize,kernelName,tupleParallelism);
+        }
+        public List<Object> getInputTupleValues(Tuple tuple){
+            return tuple.getValues();
+        }
+
         OutputCollector _collector;
         public void prepare(Map conf,TopologyContext context,OutputCollector collector){
             _collector = collector;
         }
         public void declareOutputFields(OutputFieldsDeclarer declarer){
-             declarer.declare(new Fields("InnerProduct"));
+            declarer.declare(new Fields("vectorC"));
         }
         public void execute(Tuple tuple){
             float[] vectorA = (float[])tuple.getValue(0);
             float[] vectorB = (float[])tuple.getValue(1);
             int vectorSize = vectorA.length;
-            float sum = 0.0f;
+            float[] vectorC = new float[vectorSize];
             for(int i = 0; i < vectorSize; i++){
-                sum += vectorA[i] * vectorB[i];
+                vectorC[i] = vectorA[i] + vectorB[i];
             }
-            _collector.emit(tuple,new Values(sum));
+            _collector.emit(tuple,new Values(vectorC));
             _collector.ack(tuple);
         }
         public void cleanup(){
@@ -101,51 +113,21 @@ public class VectorMultOnStorm {
         }
     }
 
-    public static class ResultWriter extends BaseRichBolt{
+    public static class ResultWriter extends BaseRichBolt {
         private static final Logger LOG = LoggerFactory.getLogger(ResultWriter.class);
         OutputCollector _collector;
-       /* String filePath;
-        FileOutputStream fos = null;
-        DataOutputStream dos = null;
-        public ResultWriter(String filePath){
-            this.filePath = filePath;
-        }*/
         public void prepare(Map conf,TopologyContext context,OutputCollector collector){
             _collector = collector;
-           /* try{
-                File file = new File(filePath);
-                if(!file.exists()){
-                    file.createNewFile();
-                }
-                fos = new FileOutputStream(file);
-                dos = new DataOutputStream(fos);
-            }catch (Exception e){
-                e.printStackTrace();
-            }*/
         }
         public void declareOutputFields(OutputFieldsDeclarer declarer){
         }
         public void execute(Tuple tuple){
-            float vectorInnerProduct = tuple.getFloat(0);
-            /*try{
-                for(int i = 0; i < vectorC.length;i++){
-                    dos.writeFloat(vectorC[i]);
-                    dos.writeChar(32); // 空格
-                }
-                dos.writeChar(13); // 换行
-            }catch (Exception e){
-                e.printStackTrace();
-            }*/
-            LOG.info("InnerProduct: " + vectorInnerProduct);
+            float[] vectorC = (float[])tuple.getValue(0);
+
+            LOG.info("vectorC(first element): " + vectorC[0]);
             _collector.ack(tuple);
         }
         public void cleanup(){
-            /*try{
-                dos.close();
-                fos.close();
-            }catch (Exception e){
-                e.printStackTrace();
-            }*/
         }
     }
 
@@ -206,8 +188,8 @@ public class VectorMultOnStorm {
     }
 
     public static void main(String[] args) throws Exception{
-        if(args == null ||args.length <8){
-            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond vectorSize isDebug");
+        if(args == null ||args.length < 9){
+            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond vectorSize batchSize isDebug");
         }else{
             int spoutNum = Integer.valueOf(args[0]);
             int bolt1Num = Integer.valueOf(args[1]);
@@ -218,8 +200,8 @@ public class VectorMultOnStorm {
 
             int ratePerSecond = Integer.valueOf(args[5]);
             int vectorSize = Integer.valueOf(args[6]);
-        //    String filePath = args[7];
-            boolean isDebug = Boolean.valueOf(args[7]);
+            int batchSize = Integer.valueOf(args[7]);
+            boolean isDebug = Boolean.valueOf(args[8]);
 
             Config conf = new Config();
 
@@ -227,14 +209,22 @@ public class VectorMultOnStorm {
 
 
             builder.setSpout("vectorGenerator",new VectorGenerator(ratePerSecond,vectorSize),spoutNum);
-            builder.setBolt("vectorInnerProduct",new VectorInnerProduct(),bolt1Num).shuffleGrouping("vectorGenerator");
-            builder.setBolt("resultWriter",new ResultWriter(),bolt2Num).shuffleGrouping("vectorInnerProduct");
-
+            builder.setAccBolt("vectorAdd",new VectorAdd(
+                    // input data type
+                    new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,vectorSize),
+                            new TupleInnerDataType(DataType.FLOAT,true,vectorSize)},
+                    // output data type
+                    new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT,true,vectorSize)},
+                    //new ConstantParameter[]{new ConstantParameter(DataType.INT,200)},
+                    null,
+                    batchSize,"vector_add",vectorSize),bolt1Num).shuffleGrouping("vectorGenerator");
+            builder.setBolt("resultWriter",new ResultWriter(),bolt2Num).shuffleGrouping("vectorAdd");
+            builder.setTopologyKernelFile("vector_add");
             conf.setNumWorkers(numWorkers);
             conf.setNumAckers(numAckers);
             conf.setDebug(isDebug);
 
-            String name = "VectorMultiplyOnStorm"; //拓扑名称
+            String name = "FStormVectorAdd"; //拓扑名称
 
             StormSubmitter.submitTopologyWithProgressBar(name, conf, builder.createTopology());
 

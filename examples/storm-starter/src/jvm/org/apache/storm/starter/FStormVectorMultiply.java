@@ -60,6 +60,10 @@ public class FStormVectorMultiply {
             _emitsLeft = _emitAmount;
             vectorA = new float[vectorSize];
             vectorB = new float[vectorSize];
+            for(int i = 0; i < vectorSize;i++){
+                vectorA[i] = _rand.nextFloat();
+                vectorB[i] = _rand.nextFloat();
+            }
         }
         @Override
         public void nextTuple(){
@@ -69,10 +73,6 @@ public class FStormVectorMultiply {
             }
 
             if (_emitsLeft > 0) {
-                for(int i = 0; i < vectorSize;i++){
-                    vectorA[i] = _rand.nextFloat();
-                    vectorB[i] = _rand.nextFloat();
-                }
                 _collector.emit(new Values(vectorA,vectorB),_rand.nextInt());
                 _emitsLeft--;
             }
@@ -226,7 +226,7 @@ public class FStormVectorMultiply {
             conf.setNumAckers(numAckers);
             conf.setDebug(isDebug);
 
-            String name = "VectorMultiplyOnStorm"; //拓扑名称
+            String name = "FStormVectorMultiply"; //拓扑名称
 
             StormSubmitter.submitTopologyWithProgressBar(name, conf, builder.createTopology());
 
@@ -235,7 +235,7 @@ public class FStormVectorMultiply {
             clusterConf.putAll(Utils.readCommandLineOpts());
             Nimbus.Client client = NimbusClient.getConfiguredClient(clusterConf).getClient();
 
-            Thread.sleep(1000 * 30);
+            Thread.sleep(1000 * 90);
             for (int i = 0; i < 30; i++) {
                 Thread.sleep(30 * 1000);
                 printMetrics(client, name);

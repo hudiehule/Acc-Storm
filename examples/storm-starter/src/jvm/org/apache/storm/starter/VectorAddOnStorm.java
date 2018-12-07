@@ -21,12 +21,12 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-/**
- * Created by Administrator on 2018/10/26.
- */
-public class VectorMultOnStorm {
 
-    public static class VectorGenerator extends BaseRichSpout{
+/**
+ * Created by Administrator on 2018/12/7.
+ */
+public class VectorAddOnStorm {
+    public static class VectorGenerator extends BaseRichSpout {
         SpoutOutputCollector _collector;
         float[] vectorA;
         float[] vectorB;
@@ -77,23 +77,23 @@ public class VectorMultOnStorm {
         }
     }
 
-    public static class VectorInnerProduct extends BaseRichBolt {
+    public static class VectorAdd extends BaseRichBolt {
         OutputCollector _collector;
         public void prepare(Map conf,TopologyContext context,OutputCollector collector){
             _collector = collector;
         }
         public void declareOutputFields(OutputFieldsDeclarer declarer){
-             declarer.declare(new Fields("InnerProduct"));
+            declarer.declare(new Fields("vectorC"));
         }
         public void execute(Tuple tuple){
             float[] vectorA = (float[])tuple.getValue(0);
             float[] vectorB = (float[])tuple.getValue(1);
             int vectorSize = vectorA.length;
-            float sum = 0.0f;
+            float[] vectorC = new float[vectorSize];
             for(int i = 0; i < vectorSize; i++){
-                sum += vectorA[i] * vectorB[i];
+                vectorC[i] = vectorA[i] + vectorB[i];
             }
-            _collector.emit(tuple,new Values(sum));
+            _collector.emit(tuple,new Values(vectorC));
             _collector.ack(tuple);
         }
         public void cleanup(){
@@ -104,12 +104,12 @@ public class VectorMultOnStorm {
     public static class ResultWriter extends BaseRichBolt{
         private static final Logger LOG = LoggerFactory.getLogger(ResultWriter.class);
         OutputCollector _collector;
-       /* String filePath;
-        FileOutputStream fos = null;
-        DataOutputStream dos = null;
-        public ResultWriter(String filePath){
-            this.filePath = filePath;
-        }*/
+        /* String filePath;
+         FileOutputStream fos = null;
+         DataOutputStream dos = null;
+         public ResultWriter(String filePath){
+             this.filePath = filePath;
+         }*/
         public void prepare(Map conf,TopologyContext context,OutputCollector collector){
             _collector = collector;
            /* try{
@@ -126,7 +126,7 @@ public class VectorMultOnStorm {
         public void declareOutputFields(OutputFieldsDeclarer declarer){
         }
         public void execute(Tuple tuple){
-            float vectorInnerProduct = tuple.getFloat(0);
+            float[] vectorC = (float[])tuple.getValue(0);
             /*try{
                 for(int i = 0; i < vectorC.length;i++){
                     dos.writeFloat(vectorC[i]);
@@ -136,7 +136,7 @@ public class VectorMultOnStorm {
             }catch (Exception e){
                 e.printStackTrace();
             }*/
-            LOG.info("InnerProduct: " + vectorInnerProduct);
+            LOG.info("vectorC(first element): " + vectorC[0]);
             _collector.ack(tuple);
         }
         public void cleanup(){
@@ -218,7 +218,7 @@ public class VectorMultOnStorm {
 
             int ratePerSecond = Integer.valueOf(args[5]);
             int vectorSize = Integer.valueOf(args[6]);
-        //    String filePath = args[7];
+            //    String filePath = args[7];
             boolean isDebug = Boolean.valueOf(args[7]);
 
             Config conf = new Config();
@@ -227,14 +227,14 @@ public class VectorMultOnStorm {
 
 
             builder.setSpout("vectorGenerator",new VectorGenerator(ratePerSecond,vectorSize),spoutNum);
-            builder.setBolt("vectorInnerProduct",new VectorInnerProduct(),bolt1Num).shuffleGrouping("vectorGenerator");
-            builder.setBolt("resultWriter",new ResultWriter(),bolt2Num).shuffleGrouping("vectorInnerProduct");
+            builder.setBolt("vectorAdd",new VectorAdd(),bolt1Num).shuffleGrouping("vectorGenerator");
+            builder.setBolt("resultWriter",new ResultWriter(),bolt2Num).shuffleGrouping("vectorAdd");
 
             conf.setNumWorkers(numWorkers);
             conf.setNumAckers(numAckers);
             conf.setDebug(isDebug);
 
-            String name = "VectorMultiplyOnStorm"; //拓扑名称
+            String name = "VectorAddOnStorm"; //拓扑名称
 
             StormSubmitter.submitTopologyWithProgressBar(name, conf, builder.createTopology());
 
