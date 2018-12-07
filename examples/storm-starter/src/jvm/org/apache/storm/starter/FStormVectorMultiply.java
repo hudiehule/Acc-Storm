@@ -103,9 +103,6 @@ public class FStormVectorMultiply {
             float[] vectorA = (float[])tuple.getValue(0);
             float[] vectorB = (float[])tuple.getValue(1);
             int vectorSize = vectorA.length;
-            LOG.info("vectorA: " + Arrays.toString(vectorA));
-            LOG.info("vectorB: " + Arrays.toString(vectorB));
-            LOG.info("vectorSize: "+ vectorSize);
             float sum = 0.0f;
             for(int i = 0; i < vectorSize; i++){
                 sum += vectorA[i] * vectorB[i];
@@ -193,8 +190,8 @@ public class FStormVectorMultiply {
     }
 
     public static void main(String[] args) throws Exception{
-        if(args == null ||args.length <9){
-            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond vectorSize batchSize isDebug");
+        if(args == null ||args.length < 10){
+            System.out.println("Please input paras: spoutNum bolt1Num bolt2Num numAckers numWorkers ratePerSecond vectorSize batchSize isDebug kernel_file");
         }else{
             int spoutNum = Integer.valueOf(args[0]);
             int bolt1Num = Integer.valueOf(args[1]);
@@ -207,7 +204,7 @@ public class FStormVectorMultiply {
             int vectorSize = Integer.valueOf(args[6]);
             int batchSize = Integer.valueOf(args[7]);
             boolean isDebug = Boolean.valueOf(args[8]);
-
+            String aocx_file_name = args[9];
             Config conf = new Config();
 
             TopologyBuilder builder = new TopologyBuilder();
@@ -220,10 +217,11 @@ public class FStormVectorMultiply {
                             new TupleInnerDataType(DataType.FLOAT,true,vectorSize)},
                     // output data type
                     new TupleInnerDataType[]{new TupleInnerDataType(DataType.FLOAT)},
-                    new ConstantParameter[]{new ConstantParameter(DataType.INT,500)},
+                    //new ConstantParameter[]{new ConstantParameter(DataType.INT,200)},
+                    null,
                     batchSize,"vectorMult",vectorSize),bolt1Num).shuffleGrouping("vectorGenerator");
             builder.setBolt("resultWriter",new ResultWriter(),bolt2Num).shuffleGrouping("vectorInnerProduct");
-            builder.setTopologyKernelFile("vector_mult");
+            builder.setTopologyKernelFile(aocx_file_name);
             conf.setNumWorkers(numWorkers);
             conf.setNumAckers(numAckers);
             conf.setDebug(isDebug);
