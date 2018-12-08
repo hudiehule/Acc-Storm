@@ -251,7 +251,7 @@ public class FStormMatrixMultiplyOneByOne {
             clusterConf.putAll(Utils.readCommandLineOpts());
             Nimbus.Client client = NimbusClient.getConfiguredClient(clusterConf).getClient();
 
-            Thread.sleep(1000 * 30);
+            Thread.sleep(1000 * 90);
             for (int i = 0; i < 30; i++) {
                 Thread.sleep(30 * 1000);
                 printMetrics(client, name);
