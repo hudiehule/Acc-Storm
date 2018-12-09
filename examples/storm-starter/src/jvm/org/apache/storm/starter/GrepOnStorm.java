@@ -117,28 +117,62 @@ public class GrepOnStorm {
         private Pattern pattern;
         private Matcher matcher;
         private final String ptnString;
-
+        private int[] next;
+        private char[] ptnChars;
         public FindMatchingWord(String ptnString) {
             this.ptnString = ptnString;
         }
 
         @Override
         public void prepare(Map stormConf, TopologyContext context) {
-            pattern = Pattern.compile(ptnString);
+           // pattern = Pattern.compile(ptnString);
+            this.next = getNext(ptnString);
+            ptnChars = ptnString.toCharArray();
         }
-
+        public static int[] getNext(String ps) {
+            char[] p = ps.toCharArray();
+            int[] next = new int[p.length];
+            next[0] = -1;
+            int j = 0;
+            int k = -1;
+            while (j < p.length - 1) {
+                if (k == -1 || p[j] == p[k]) {
+                    next[++j] = ++k;
+                } else {
+                    k = next[k];
+                }
+            }
+            return next;
+        }
         @Override
         public void execute(Tuple input, BasicOutputCollector collector) {
-            String sentence = new String((char[])input.getValue(0));
+            /*String sentence = new String((char[])input.getValue(0));
             LOG.debug(String.format("find pattern %s in sentence %s", ptnString, sentence));
             matcher = pattern.matcher(sentence);
             if (matcher.find()) {
                 collector.emit(new Values(1));
             }else{
                 collector.emit(new Values(0));
+            }*/
+            char[] src = (char[])input.getValue(0);
+            int i = 0,j =0;
+            while (i < src.length && j < ptnChars.length) {
+                if (j == -1 || src[i] == ptnChars[j]) { // 当j为-1时，要移动的是i，当然j也要归0
+                    i++;
+                    j++;
+                } else {
+                    // i不需要回溯了
+                    // i = i - j + 1;
+                    j = next[j]; // j回到指定位置
+                }
             }
-        }
+            if (j == ptnChars.length) {
+                collector.emit(new Values(1));
+            } else {
+                collector.emit(new Values(0));
+            }
 
+        }
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
             declarer.declare(new Fields(FIELDS));
