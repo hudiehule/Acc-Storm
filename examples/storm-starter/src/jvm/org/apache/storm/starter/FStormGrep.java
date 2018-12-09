@@ -108,7 +108,7 @@ public class FStormGrep {
         public void execute(Tuple input) {
             String sentence = input.getStringByField("str");
             for (String word : sentence.split("\\s+")) {
-                _collector.emit(new Values(word.toCharArray()));
+                _collector.emit(input,new Values(word.toCharArray()));
             }
             _collector.ack(input);
         }
@@ -171,7 +171,6 @@ public class FStormGrep {
         public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
             _collector = collector;
         }
-
         @Override
         public void execute(Tuple input) {
             if (input.getInteger(0).equals(1)) {
